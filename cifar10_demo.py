@@ -2,7 +2,7 @@ import os
 import glob
 
 import numpy as np
-from sqlalchemy import all_
+
 from tqdm import tqdm
 import cv2
 from keras.utils import np_utils
@@ -13,7 +13,7 @@ from helper import cnn_model, pure_cnn_model
 from pipeline_input import *
 from constants import *
 
-class cifar10_interp(pipeline_dataset_interpreter):
+class cifar10_interp_1(pipeline_dataset_interpreter):
     def load(self) -> None:
         super().load()
         dataset = {}
@@ -39,7 +39,7 @@ class cifar10_interp(pipeline_dataset_interpreter):
             dataset[t]['class'] = np_utils.to_categorical(dataset[t]['label'], num_classes)
         self.__dataset = dataset
 
-class cifar10_pipeline_model(pipeline_model):
+class cifar10_pipeline_model_1(pipeline_model):
 
     def load(self):
         super().load()
@@ -73,7 +73,7 @@ class cifar10_pipeline_model(pipeline_model):
                         verbose=1)
         #return self.__model, model_details
 
-class cifar10_pipeline_ensembler(pipeline_ensembler):
+class cifar10_pipeline_ensembler_1(pipeline_ensembler):
 
     def merge(self, x: np.array) -> np.array:
         xm = np.zeros_like(x.shape[1:], dtype=x.dtype)
@@ -81,7 +81,7 @@ class cifar10_pipeline_ensembler(pipeline_ensembler):
             xm[i] = np.argmax(x[i])
         return xm
 
-cifar10_input = pipeline_input("cifar10_cnn", cifar10_interp, cifar10_pipeline_model, cifar10_pipeline_ensembler)
+cifar10_input = pipeline_input("cifar10_cnn", {'cifar10_interp_1': cifar10_interp_1}, {'cifar10_pipeline_model_1': cifar10_pipeline_model_1}, {'cifar10_pipeline_ensembler_1': cifar10_pipeline_ensembler_1})
 
 all_inputs = {}
 all_inputs[cifar10_input.get_pipeline_name()] = cifar10_input

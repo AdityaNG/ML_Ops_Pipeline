@@ -5,14 +5,14 @@ import tensorflow as tf
 class pipeline_dataset_interpreter:
     # TODO: Impractical to have entire dataset to be loaded into memory
     # look into alterative architectures which load things into memory chunk by chunk
-    __dataset = {
+    dataset = {
         'test': {
-            'x':   [],
-            'y': []
+            'x':   None,
+            'y': None
         },
         'train': {
-            'x':   [],
-            'y': []
+            'x':   None,
+            'y': None
         }
     }
 
@@ -22,23 +22,22 @@ class pipeline_dataset_interpreter:
             self.load()
 
     def get_dataset(self) -> dict:
-        return self.__dataset
+        return self.dataset
 
     def load(self) -> None:
-        # Load the dataset into self.__dataset
+        # Load the dataset into self.dataset
         pass
 
 
 class pipeline_model:
-    __model = None
+    model = None
 
-    def __init__(self, weights_path, load=True) -> None:
-        self.weights_path = weights_path
+    def __init__(self, load=True) -> None:
         if load:
             self.load()
 
     def get_model(self) -> tf.keras.Model:
-        return self.__model
+        return self.model
 
     def load(self) -> None:
         # Load the model into self.__model
@@ -47,6 +46,9 @@ class pipeline_model:
     def predict(self, x: np.array) -> np.array:
         # Runs prediction on list of values x of length n
         # Returns a list of values of length n
+        pass
+        
+    def evaluate(self, x, y) -> np.array:
         pass
 
 class pipeline_ensembler:
@@ -61,16 +63,22 @@ class pipeline_ensembler:
 
 
 class pipeline_input:
-    __pipeline_name = None
-    __pipeline_dataset_interpreter = None
-    __pipeline_model = None
-    __pipeline_ensembler = None
+    __pipeline_name = {}
+    __pipeline_dataset_interpreter = {}
+    __pipeline_model = {}
+    __pipeline_ensembler = {}
 
-    def __init__(self, p_name: str, p_dataset_interpreter: type, p_model: type, p_ensembler: type) -> None:
+    def __init__(self, p_name: str, p_dataset_interpreter: dict, p_model: dict, p_ensembler: dict) -> None:
         assert isinstance(p_name, str)
-        assert issubclass(p_dataset_interpreter,pipeline_dataset_interpreter)
-        assert issubclass(p_model,pipeline_model)
-        assert issubclass(p_ensembler,pipeline_ensembler)
+        assert isinstance(p_dataset_interpreter,dict)
+        for p in p_dataset_interpreter:
+	        assert issubclass(p_dataset_interpreter[p],pipeline_dataset_interpreter)
+        assert isinstance(p_model,dict)
+        for p in p_model:
+	        assert issubclass(p_model[p],pipeline_model)
+        assert isinstance(p_ensembler,dict)
+        for p in p_ensembler:
+	        assert issubclass(p_ensembler[p],pipeline_ensembler)
         self.__pipeline_name = p_name
         self.__pipeline_dataset_interpreter = p_dataset_interpreter
         self.__pipeline_model = p_model
@@ -79,11 +87,20 @@ class pipeline_input:
     def get_pipeline_name(self) -> str:
         return self.__pipeline_name
 
-    def get_pipeline_dataset_interpreter(self) -> type:
+    def get_pipeline_dataset_interpreter_by_name(self, name: str) -> type:
+        return self.__pipeline_dataset_interpreter[name]
+    
+    def get_pipeline_model_by_name(self, name: str) -> type:
+        return self.__pipeline_model[name]
+
+    def get_pipeline_ensembler_by_name(self, name: str) -> type:
+        return self.__pipeline_ensembler[name]
+
+    def get_pipeline_dataset_interpreter(self) -> dict:
         return self.__pipeline_dataset_interpreter
     
-    def get_pipeline_model(self) -> type:
+    def get_pipeline_model(self) -> dict:
         return self.__pipeline_model
 
-    def get_pipeline_ensembler(self) -> type:
+    def get_pipeline_ensembler(self) -> dict:
         return self.__pipeline_ensembler
