@@ -7,11 +7,8 @@ import xml.etree.ElementTree as ET
 from tqdm import tqdm
 import cv2
 from keras.utils import np_utils
-from tensorflow.keras.optimizers import Adam
-from keras.callbacks import ModelCheckpoint
 import torch
 
-from helper import cnn_model, pure_cnn_model
 from pipeline_input import *
 from constants import *
 
@@ -268,8 +265,11 @@ obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': ob
 		'obj_det_data_visualizer': obj_det_data_visualizer
 	})
 
+from depth_perception_demo import depth_input
+
 all_inputs = {}
 all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input
+all_inputs[depth_input.get_pipeline_name()] = depth_input
 
 
 #########################################################################
