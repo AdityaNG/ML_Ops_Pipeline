@@ -9,7 +9,7 @@ from keras.utils import np_utils
 from tensorflow.keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 
-from helper import cnn_model, pure_cnn_model
+from helper import cnn_model
 from pipeline_input import *
 from constants import *
 
@@ -37,6 +37,7 @@ class cifar10_interp_1(pipeline_dataset_interpreter):
 				dataset[t]['img'][line_no] = img
 				dataset[t]['label'][line_no] = int(label)
 			dataset[t]['class'] = np_utils.to_categorical(dataset[t]['label'], num_classes)
+			f.close()
 		self.__dataset = dataset
 
 class cifar10_pipeline_model_1(pipeline_model):

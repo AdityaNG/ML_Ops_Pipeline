@@ -1,24 +1,14 @@
-from xml.parsers.expat import model
-from constants import *
+"""
+model_analysis
+"""
+
 import glob
 import pickle
 import os
-
-import numpy as np
-import matplotlib
-from matplotlib import pyplot as plt
-from keras.models import Sequential
-from tensorflow.keras.optimizers import Adam, SGD
-from keras.callbacks import ModelCheckpoint
-from keras.constraints import maxnorm
-from keras.models import load_model
-from keras.layers import GlobalAveragePooling2D, Lambda, Conv2D, MaxPooling2D, Dropout, Dense, Flatten, Activation
-from keras.preprocessing.image import ImageDataGenerator
 import time
 
-from helper import predict_classes, visualize_errors, plot_model
-
 from obj_det_demo import all_inputs
+from constants import DATASET_DIR, MODEL_TESTING
 
 def main():
 	for pipeline_name in all_inputs:
@@ -35,7 +25,11 @@ def main():
 					print("model_name:\t",model_name)
 					print("interpreter_name:\t",interpreter_name)
 					print("dataset_dir:\t",dataset_dir)
-					testing_dir = MODEL_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
+					testing_dir = MODEL_TESTING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						model_name=model_name
+					)
 					os.makedirs(testing_dir, exist_ok=True)
 					mod = model_classes[model_name]()
 					#mod.predict(dat['test'])
@@ -43,7 +37,7 @@ def main():
 					print(results)
 					results_pkl = os.path.join(testing_dir, "results.pkl")
 					predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
-					
+
 					results_handle = open(results_pkl, 'wb')
 					pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
 					results_handle.close()
@@ -54,6 +48,16 @@ def main():
 
 if __name__ == "__main__":
 	import traceback
+	import argparse
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--single', action='store_true', help='Run the loop only once')
+	args = parser.parse_args()
+
+	if args.single:
+		main()
+		exit()
+		
 	while True:
 		try:
 			main()

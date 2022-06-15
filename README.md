@@ -16,10 +16,22 @@ python data_ingestion.py --input_dir ~/Downloads/karthika95-pedestrian-detection
 
 To generate individual model outputs, run as follows.
 ```bash
-python model_analysis.py
+python model_analysis.py --single
 ```
 
 To generate ensembler outputs, run as follows.
 ```bash
-python ensemble_analysis.py
+python ensemble_analysis.py --single
 ```
+
+# Code Quality
+Static Code Analysis
+```bash
+python -m pylint *.py
+python -m pycodestyle *.py
+```
+
+# Unit Testing
+
+TODO
+

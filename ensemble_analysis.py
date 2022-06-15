@@ -1,23 +1,19 @@
-from xml.parsers.expat import model
-from constants import *
+"""
+ensemble analysis
+
+Runs analysis on all the enseble models.
+Loads in the datasets and outputs from the individual models.
+Runs the inputs through all the enseble models and verifies outputs
+against the dataset ground truth
+"""
+
 import glob
 import pickle
 import os
 
-import numpy as np
-import matplotlib
-from matplotlib import pyplot as plt
-from keras.models import Sequential
-from tensorflow.keras.optimizers import Adam, SGD
-from keras.callbacks import ModelCheckpoint
-from keras.constraints import maxnorm
-from keras.models import load_model
-from keras.layers import GlobalAveragePooling2D, Lambda, Conv2D, MaxPooling2D, Dropout, Dense, Flatten, Activation
-from keras.preprocessing.image import ImageDataGenerator
 import time
 
-from helper import predict_classes, visualize_errors, plot_model
-
+from constants import MODEL_TESTING, ENSEMBLE_TESTING, DATASET_DIR
 from obj_det_demo import all_inputs
 
 def main():
@@ -45,14 +41,14 @@ def main():
 					
 					results_handle = open(results_pkl, 'rb')
 					results = pickle.load(results_handle)
-					results_handle.close
+					results_handle.close()
 
 					predictions_handle = open(predictions_pkl, 'rb')
 					predictions = pickle.load(predictions_handle)
-					predictions_handle.close
+					predictions_handle.close()
 					
 					model_predictions[model_name] = predictions
-				
+
 				for ensembler_name in ensemble_classes:
 					print("-"*os.get_terminal_size().columns)
 					print("ensembler_name:\t",ensembler_name)
@@ -67,10 +63,23 @@ def main():
 
 if __name__ == "__main__":
 	import traceback
+	import argparse
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--single', action='store_true', help='Run the loop only once')
+	args = parser.parse_args()
+
+	if args.single:
+		main()
+		exit()
+
 	while True:
 		try:
 			main()
-		except Exception as e:
+		except Exception as ex:
+			print("-"*os.get_terminal_size().columns)
+			print("An error has occured")
+			print(ex)
 			traceback.print_exc()
-			print("Exception: {}".format(e))
+			print("-"*os.get_terminal_size().columns)
 			time.sleep(1)

@@ -47,7 +47,7 @@ class pipeline_model:
 		# Runs prediction on list of values x of length n
 		# Returns a list of values of length n
 		pass
-		
+
 	def evaluate(self, x, y) -> np.array:
 		pass
 
@@ -86,13 +86,13 @@ class pipeline_input:
 		self.__pipeline_dataset_interpreter = p_dataset_interpreter
 		self.__pipeline_model = p_model
 		self.__pipeline_ensembler = p_ensembler
-	
+
 	def get_pipeline_name(self) -> str:
 		return self.__pipeline_name
 
 	def get_pipeline_dataset_interpreter_by_name(self, name: str) -> type:
 		return self.__pipeline_dataset_interpreter[name]
-	
+
 	def get_pipeline_model_by_name(self, name: str) -> type:
 		return self.__pipeline_model[name]
 
@@ -101,7 +101,7 @@ class pipeline_input:
 
 	def get_pipeline_dataset_interpreter(self) -> dict:
 		return self.__pipeline_dataset_interpreter
-	
+
 	def get_pipeline_model(self) -> dict:
 		return self.__pipeline_model
 
