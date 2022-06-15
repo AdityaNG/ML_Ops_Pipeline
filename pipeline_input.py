@@ -64,14 +64,21 @@ class pipeline_ensembler:
 	def evaluate(self, x, y) -> np.array:
 		pass
 
+class pipeline_data_visualizer:
+
+	def visualize(self, dataset, results, mode='') -> None:
+		# Visualize the data
+		pass
+
 
 class pipeline_input:
 	__pipeline_name = {}
 	__pipeline_dataset_interpreter = {}
 	__pipeline_model = {}
 	__pipeline_ensembler = {}
+	__pipeline_data_visualizer = {}
 
-	def __init__(self, p_name: str, p_dataset_interpreter: dict, p_model: dict, p_ensembler: dict) -> None:
+	def __init__(self, p_name: str, p_dataset_interpreter: dict, p_model: dict, p_ensembler: dict, p_vizualizer: dict) -> None:
 		assert isinstance(p_name, str)
 		assert isinstance(p_dataset_interpreter,dict)
 		for p in p_dataset_interpreter:
@@ -82,10 +89,14 @@ class pipeline_input:
 		assert isinstance(p_ensembler,dict)
 		for p in p_ensembler:
 			assert issubclass(p_ensembler[p],pipeline_ensembler)
+		assert isinstance(p_vizualizer,dict)
+		for p in p_vizualizer:
+			assert issubclass(p_vizualizer[p],pipeline_data_visualizer)
 		self.__pipeline_name = p_name
 		self.__pipeline_dataset_interpreter = p_dataset_interpreter
 		self.__pipeline_model = p_model
 		self.__pipeline_ensembler = p_ensembler
+		self.__pipeline_data_visualizer = p_vizualizer
 
 	def get_pipeline_name(self) -> str:
 		return self.__pipeline_name
@@ -98,6 +109,9 @@ class pipeline_input:
 
 	def get_pipeline_ensembler_by_name(self, name: str) -> type:
 		return self.__pipeline_ensembler[name]
+	
+	def get_pipeline_visualizer_by_name(self, name: str) -> type:
+		return self.__pipeline_data_visualizer[name]
 
 	def get_pipeline_dataset_interpreter(self) -> dict:
 		return self.__pipeline_dataset_interpreter
@@ -107,3 +121,6 @@ class pipeline_input:
 
 	def get_pipeline_ensembler(self) -> dict:
 		return self.__pipeline_ensembler
+
+	def get_pipeline_visualizer(self) -> dict:
+		return self.__pipeline_data_visualizer

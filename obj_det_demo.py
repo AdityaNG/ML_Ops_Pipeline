@@ -69,6 +69,48 @@ class obj_det_interp_1(pipeline_dataset_interpreter):
 									information['ymax']+=[ymax]
 		return pd.DataFrame(information)
 
+class obj_det_data_visualizer(pipeline_data_visualizer):
+
+	def visualize(self, x, y, preds, mode='') -> None:
+		plot = 'plot' in mode
+		plot = True
+		image_names_list = y["name"].unique()
+		iou_list = []
+		iou_thresh = 0.5
+		yolo_metrics = {
+			'tp':0, 	# iou>thresh
+			'fp': 0, 	# 0<iou<thresh
+			'fn':0		# iou==0	
+		}
+		for image_name in image_names_list:
+			labels = y[y["name"]==image_name]
+			detections = preds[preds["name"]==image_name]
+			for index1, lab in labels.iterrows():
+				largest_iou = 0.0
+				for index2, yolo_bb in detections.iterrows():
+					iou = get_iou(lab, yolo_bb)
+					if iou > largest_iou:
+						largest_iou = iou
+				if largest_iou==0:
+					yolo_metrics['fn'] += 1
+				else:
+					if largest_iou>iou_thresh:
+						yolo_metrics['tp'] += 1
+					else:
+						yolo_metrics['fp'] += 1
+				iou_list.append(largest_iou)
+			if plot:
+				image_path = labels["image"].iloc[0]
+				img = cv2.imread(image_path)
+				for index1, lab in labels.iterrows():
+					img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (255,0,0),2)
+				for index2, lab in detections.iterrows():
+					img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (0,255,0),2)
+				print(len(labels), len(detections))
+				print(labels)
+				print(detections)
+				cv2.imshow('img', img)
+				cv2.waitKey(0)
 
 class obj_det_evaluator:
 
@@ -220,7 +262,11 @@ obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': ob
 		'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
 		'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
 		'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
-	}, {'obj_det_pipeline_ensembler_1': obj_det_pipeline_ensembler_1})
+	}, {
+		'obj_det_pipeline_ensembler_1': obj_det_pipeline_ensembler_1
+	}, {
+		'obj_det_data_visualizer': obj_det_data_visualizer
+	})
 
 all_inputs = {}
 all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input

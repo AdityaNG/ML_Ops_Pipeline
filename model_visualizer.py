@@ -17,7 +17,7 @@ from sqlalchemy import all_
 from constants import DATASET_DIR, MODEL_TESTING, DATA_BASE_DIR, MODEL_BASE
 from pipeline_input import pipeline_input
 
-def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name: str, model_name: str):
+def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name: str, model_name: str, visualizer_name: str):
 	assert isinstance(p_input, pipeline_input)
 	pipeline_name = p_input.get_pipeline_name()
 	all_dataset_interpreters = p_input.get_pipeline_dataset_interpreter()
@@ -50,7 +50,6 @@ def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name
 		print("\n".join(model_classes.keys()))
 		exit()
 
-	mod = model_classes[model_name]()
 
 	results_pkl = os.path.join(testing_dir, "results.pkl")
 	predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
@@ -58,7 +57,15 @@ def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name
 	if not os.path.exists(results_pkl) or not os.path.exists(predictions_pkl):
 		print("Analysis data for the given combination has not been generated yet")
 		exit()
-	
+
+	visualizer_classes = p_input.get_pipeline_visualizer()
+	if visualizer_name=='' or visualizer_name not in visualizer_classes:
+		print("Vizualizer does not exist")
+		print("List of available Ensemble Vizualizer for pipeline=", pipeline_name)
+		print("\n".join(visualizer_classes.keys()))
+		exit()
+	visualizer = p_input.get_pipeline_visualizer_by_name(visualizer_name)()
+
 	results_handle = open(results_pkl, 'rb')
 	results = pickle.load(results_handle)
 	results_handle.close()
@@ -75,7 +82,8 @@ def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name
 	print(results)
 	print(predictions)
 
-	results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'], plot=True)
+	visualizer.visualize(dat['test']['x'], dat['test']['y'], predictions)
+
 
 
 if __name__=="__main__":
@@ -87,6 +95,7 @@ if __name__=="__main__":
 	parser.add_argument('--interpreter_name', type=str, default='')
 	parser.add_argument('--dataset_name', type=str, default='')
 	parser.add_argument('--model_name', type=str, default='')
+	parser.add_argument('--visualizer_name', type=str, default='')
 	args = parser.parse_args()
 	if args.pipeline_name not in all_inputs:
 		print("Pipeline does not exist")
@@ -94,4 +103,4 @@ if __name__=="__main__":
 		print("\n".join(all_inputs.keys()))
 		exit()
 
-	vizualize_model(all_inputs[args.pipeline_name], args.interpreter_name, args.dataset_name, args.model_name)
+	vizualize_model(all_inputs[args.pipeline_name], args.interpreter_name, args.dataset_name, args.model_name, args.visualizer_name)

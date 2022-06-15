@@ -24,6 +24,17 @@ To generate ensembler outputs, run as follows.
 python ensemble_analysis.py --single
 ```
 
+To visualize model results
+```bash
+python model_visualizer.py --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection --dataset_name 2022-06-15_21:25:11.138663 --model_name obj_det_pipeline_model_yolov5s --visualizer_name obj_det_data_visualizer
+```
+
+To visualize ensemble model results
+```bash
+python ensemble_visualizer.py --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection --dataset_name 2022-06-15_21:25:11.138663 --ensemble_name obj_det_pipeline_ensembler_1 --visualizer_name obj_det_data_visualizer
+```
+
+
 # Code Quality
 Static Code Analysis
 ```bash

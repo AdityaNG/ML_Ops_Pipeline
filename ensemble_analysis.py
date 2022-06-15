@@ -54,22 +54,22 @@ def main():
 					print("ensembler_name:\t",ensembler_name)
 					print("interpreter_name:\t",interpreter_name)
 					print("dataset_dir:\t",dataset_dir)
-					testing_dir = ENSEMBLE_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
+					ens_testing_dir = ENSEMBLE_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
 					ens = ensemble_classes[ensembler_name]()
 					#mod.predict(dat['test'])
-					results, predictions = ens.evaluate(model_predictions, dat['test']['y'])
+					ens_results, ens_predictions = ens.evaluate(model_predictions, dat['test']['y'])
 					print(results)
 					
-					results_pkl = os.path.join(testing_dir, "results.pkl")
-					predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+					ens_results_pkl = os.path.join(ens_testing_dir, "results.pkl")
+					ens_predictions_pkl = os.path.join(ens_testing_dir, "predictions.pkl")
 
-					results_handle = open(results_pkl, 'wb')
-					pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
-					results_handle.close()
+					ens_results_handle = open(ens_results_pkl, 'wb')
+					pickle.dump(ens_results, ens_results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					ens_results_handle.close()
 
-					predictions_handle = open(predictions_pkl, 'wb')
-					pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
-					predictions_handle.close()
+					ens_predictions_handle = open(ens_predictions_pkl, 'wb')
+					pickle.dump(ens_predictions, ens_predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					ens_predictions_handle.close()
 					print("-"*os.get_terminal_size().columns)
 
 if __name__ == "__main__":
