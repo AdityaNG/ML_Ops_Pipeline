@@ -70,38 +70,7 @@ class obj_det_interp_1(pipeline_dataset_interpreter):
 		return pd.DataFrame(information)
 
 
-class obj_det_pipeline_model(pipeline_model):
-
-	def load(self):
-		self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
-		
-	def train(self, log_dir, dataset):
-		# TODO: Training
-		pass
-		
-	def predict(self, x: dict) -> np.array:
-		# Runs prediction on list of values x of length n
-		# Returns a list of values of length n
-		predict_results = {
-			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
-		}
-		for image_path in x:
-			   img = cv2.imread(image_path)
-			   results = self.model(image_path)
-			   df = results.pandas().xyxyn[0]
-			   res = df[df["name"]=="person"]
-			   for index, yolo_bb in res.iterrows():
-				   file_name = image_path.split('/')[-1][0:-4]
-				   predict_results["xmin"] += [yolo_bb["xmin"]*img.shape[1]]
-				   predict_results["ymin"] += [yolo_bb["ymin"]*img.shape[0]]
-				   predict_results["xmax"] += [yolo_bb["xmax"]*img.shape[1]]
-				   predict_results["ymax"] += [yolo_bb["ymax"]*img.shape[0]]
-				   predict_results["confidence"] += [yolo_bb["confidence"]]
-				   predict_results["name"] += [file_name]
-				   predict_results["image"] += [image_path]
-		predict_results = pd.DataFrame(predict_results)
-		return predict_results
-
+class obj_det_evaluator:
 
 	def evaluate(self, x, y, plot=False):
 		preds = self.predict(x)
@@ -153,7 +122,41 @@ class obj_det_pipeline_model(pipeline_model):
 			'iou_avg': iou_avg,
 			'confusion': yolo_metrics
 		}
-		return results
+		return results, preds
+
+
+class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
+
+	def load(self):
+		self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+		
+	def train(self, log_dir, dataset):
+		# TODO: Training
+		pass
+		
+	def predict(self, x: dict) -> np.array:
+		# Runs prediction on list of values x of length n
+		# Returns a list of values of length n
+		predict_results = {
+			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
+		}
+		for image_path in x:
+			img = cv2.imread(image_path)
+			results = self.model(image_path)
+			df = results.pandas().xyxyn[0]
+			res = df[df["name"]=="person"]
+			for index, yolo_bb in res.iterrows():
+				file_name = image_path.split('/')[-1][0:-4]
+				predict_results["xmin"] += [yolo_bb["xmin"]*img.shape[1]]
+				predict_results["ymin"] += [yolo_bb["ymin"]*img.shape[0]]
+				predict_results["xmax"] += [yolo_bb["xmax"]*img.shape[1]]
+				predict_results["ymax"] += [yolo_bb["ymax"]*img.shape[0]]
+				predict_results["confidence"] += [yolo_bb["confidence"]]
+				predict_results["name"] += [file_name]
+				predict_results["image"] += [image_path]
+		predict_results = pd.DataFrame(predict_results)
+		return predict_results
+
 
 class obj_det_pipeline_model_yolov5n(obj_det_pipeline_model):
 	def load(self):
@@ -175,13 +178,40 @@ class obj_det_pipeline_model_yolov5x(obj_det_pipeline_model):
 	def load(self):
 		self.model = torch.hub.load('ultralytics/yolov5', 'yolov5x')
 
-class obj_det_pipeline_ensembler_1(pipeline_ensembler):
+class obj_det_pipeline_ensembler_1(obj_det_evaluator, pipeline_ensembler):
 
-	def merge(self, x: np.array) -> np.array:
-		xm = np.zeros_like(x.shape[1:], dtype=x.dtype)
-		for i in range(len(x.shape[0])):
-			xm[i] = np.argmax(x[i])
-		return xm
+	def predict(self, x: dict) -> np.array:
+		model_names = list(x.keys())
+		image_paths = x[model_names[0]]["image"].unique()
+		nms_res = {'xmin':[],'ymin':[],'xmax':[],'ymax':[],'ymax':[], 'confidence':[],'name':[], 'image':[]}
+		for img_path in image_paths:
+			boxes = []
+			scores = []
+			for mod_name in model_names:
+				preds = x[mod_name][x[mod_name]["image"]==img_path]
+				for index, lab in preds.iterrows():
+					boxes.append((
+						lab['xmin'],				# x
+						lab['ymin'],				# y
+						lab['xmax'] - lab['xmin'],	# w
+						lab['ymax'] - lab['ymin'],	# h
+					))
+					scores.append(lab['confidence'])
+			indexes = cv2.dnn.NMSBoxes(boxes, scores,score_threshold=0.4,nms_threshold=0.8)
+			for ind in indexes:
+				i = ind[0]
+				file_name = img_path.split('/')[-1][0:-4]
+				nms_res['xmin'] += [boxes[i][0]]
+				nms_res['ymin'] += [boxes[i][1]]
+				nms_res['xmax'] += [boxes[i][0] + boxes[i][2]]
+				nms_res['ymax'] += [boxes[i][1] + boxes[i][3]]
+				nms_res['confidence'] += [scores[i]]
+				nms_res['name'] += [file_name]
+				nms_res['image'] += [img_path]
+		nms_res = pd.DataFrame(nms_res)
+		print(nms_res)
+		return nms_res
+		
 
 obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': obj_det_interp_1}, 
 	{

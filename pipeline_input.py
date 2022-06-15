@@ -53,12 +53,15 @@ class pipeline_model:
 
 class pipeline_ensembler:
 
-	def merge(self, x: np.array) -> np.array:
+	def predict(self, x: np.array) -> np.array:
 		# Given a list of lists of predictions from multiple learners
 		# Say m learners and n predictions
 		# x[m][n] -> the nth prediction for the mth learner
 		# Returns a single result
 		# y[n] -> merged nth prediction
+		pass
+		
+	def evaluate(self, x, y) -> np.array:
 		pass
 
 

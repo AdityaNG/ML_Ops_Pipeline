@@ -9,8 +9,8 @@ DATASET_DIR = "data/{pipeline_name}/datasets/"
 MODEL_TRAINING = "data/{pipeline_name}/models/{model_name}/training/{interpreter_name}"
 MODEL_TESTING = "data/{pipeline_name}/models/{model_name}/testing/{interpreter_name}"
 
-ENSEMBLER_TRAINING = "data/{pipeline_name}/ensemblers/{ensembler_name}/training/{interpreter_name}"
-ENSEMBLER_TESTING = "data/{pipeline_name}/ensemblers/{ensembler_name}/testing/{interpreter_name}"
+ENSEMBLE_TRAINING = "data/{pipeline_name}/ensemblers/{ensembler_name}/training/{interpreter_name}"
+ENSEMBLE_TESTING = "data/{pipeline_name}/ensemblers/{ensembler_name}/testing/{interpreter_name}"
 
 # Hight and width of the images
 IMAGE_SIZE = 32

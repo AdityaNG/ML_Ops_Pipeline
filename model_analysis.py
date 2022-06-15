@@ -36,10 +36,21 @@ def main():
 					print("interpreter_name:\t",interpreter_name)
 					print("dataset_dir:\t",dataset_dir)
 					testing_dir = MODEL_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
+					os.makedirs(testing_dir, exist_ok=True)
 					mod = model_classes[model_name]()
 					#mod.predict(dat['test'])
-					results = mod.evaluate(dat['test']['x'], dat['test']['y'])
+					results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
 					print(results)
+					results_pkl = os.path.join(testing_dir, "results.pkl")
+					predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+					
+					results_handle = open(results_pkl, 'wb')
+					pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					results_handle.close()
+
+					predictions_handle = open(predictions_pkl, 'wb')
+					pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					predictions_handle.close()
 
 if __name__ == "__main__":
 	import traceback
