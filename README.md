@@ -5,10 +5,24 @@ A simple demonstration of an ML Ops pipeline involving three stages:
 2. Model Training
 3. Model Analysis
 
-<img src="imgs/pipeline.png">
+# Getting started
 
-Video Demo (3 Minutes): <a href="https://drive.google.com/file/d/1ni1Sq3sTFeZ01gS82wZP5bVD4P4w-wSe/view?usp=sharing">Toy ML Ops Pipeline Video Demo</a>
+Download and unzip the <a href="https://www.kaggle.com/datasets/karthika95/pedestrian-detection">karthika95-pedestrian-detection kaggle dataset</a> to `~/Downloads/karthika95-pedestrian-detection/`.
 
+Data ingestion can be run with the following. It will validate the dataset and store it to `data/`.
+```bash
+python data_ingestion.py --input_dir ~/Downloads/karthika95-pedestrian-detection/ --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection
+```
+
+To generate individual model outputs, run as follows.
+```bash
+python model_analysis.py
+```
+
+To generate ensembler outputs, run as follows.
+```bash
+python ensemble_analysis.py
+```
 
 ## Data Ingestion
 

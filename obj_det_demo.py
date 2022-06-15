@@ -130,7 +130,7 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 	def load(self):
 		self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
 		
-	def train(self, log_dir, dataset):
+	def train(self, dataset):
 		# TODO: Training
 		pass
 		
