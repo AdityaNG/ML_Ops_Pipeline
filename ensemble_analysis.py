@@ -57,8 +57,19 @@ def main():
 					testing_dir = ENSEMBLE_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
 					ens = ensemble_classes[ensembler_name]()
 					#mod.predict(dat['test'])
-					results = ens.evaluate(model_predictions, dat['test']['y'])
+					results, predictions = ens.evaluate(model_predictions, dat['test']['y'])
 					print(results)
+					
+					results_pkl = os.path.join(testing_dir, "results.pkl")
+					predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+
+					results_handle = open(results_pkl, 'wb')
+					pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					results_handle.close()
+
+					predictions_handle = open(predictions_pkl, 'wb')
+					pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					predictions_handle.close()
 					print("-"*os.get_terminal_size().columns)
 
 if __name__ == "__main__":
