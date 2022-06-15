@@ -268,7 +268,7 @@ obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': ob
 from depth_perception_demo import depth_input
 
 all_inputs = {}
-all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input
+#all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input
 all_inputs[depth_input.get_pipeline_name()] = depth_input
 
 

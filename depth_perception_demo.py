@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+import PIL
+import cv2
 from pipeline_input import *
 from constants import *
 
@@ -51,10 +53,10 @@ class depth_interp_airsim(pipeline_dataset_interpreter):
 			gt_images = []
 			for f in files:
 				cam_id, img_format = f.split("_")[2:4]
-				if img_format in (1,2,3,4,5,6):
-					gt_images.append(os.path.join(images_folder, f))
-					assert os.path.exists(gt_images[-1])
-				else:
+				# if img_format in (1,2,3,4,5,6):
+				# 	gt_images.append(os.path.join(images_folder, f))
+				# 	assert os.path.exists(gt_images[-1])
+				if img_format=='0':
 					input_images.append(os.path.join(images_folder, f))
 					assert os.path.exists(input_images[-1])
 			for col in df.columns:
@@ -81,8 +83,11 @@ class depth_data_visualizer(pipeline_data_visualizer):
 
 class depth_evaluator:
 
-	def evaluate(self, x, y, plot=False):
-		preds = self.predict(x)
+	def evaluate(self, x: pd.DataFrame, y, plot=False):
+		preds = 0
+		for inxex, row in x.iterrows():
+			pred = self.predict(row)
+		
 		results = 0
 		# TODO: implement evaluation
 		return results, preds
@@ -90,19 +95,39 @@ class depth_evaluator:
 class depth_pipeline_model(depth_evaluator, pipeline_model):
 
 	def load(self):
-		self.model = 0
+		import monodepth2
+		self.model = monodepth2.monodepth2()
 		
 	def train(self, dataset):
 		# TODO: Training
 		pass
 		
-	def predict(self, x: str) -> np.array:
+	def predict(self, x) -> np.array:
 		# Runs prediction on list of values x of length n
 		# Returns a list of values of length n
 		predict_results = {
 			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
 		}
 		# TODO: Implement prediction
+		print(x)
+		image_files = x["ImageFile"].split(";")
+		for image_path in image_files:
+			print(image_path)
+			f = image_path.split("/")[-1]
+			cam_id, img_format = f.split("_")[2:4]
+			img_format = int(img_format)
+			if f.endswith('.ppm'):
+				#img = PIL.Image.open(image_path)
+				#img = np.array(img.getdata()).reshape(img.size[1], img.size[0], 3)
+				img = cv2.imread(image_path)
+			#elif f.endswith('.pfm'):
+			#	img, scale = airsim.read_pfm(f)
+			else:
+				print("Unknown format")
+
+			depth = self.model.eval(img)
+			cv2.imshow('depth_'+str(cam_id),depth)
+		cv2.waitKey(1)
 		predict_results = pd.DataFrame(predict_results)
 		return predict_results
 

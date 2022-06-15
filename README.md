@@ -34,6 +34,13 @@ To visualize ensemble model results
 python ensemble_visualizer.py --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection --dataset_name 2022-06-15_21:25:11.138663 --ensemble_name obj_det_pipeline_ensembler_1 --visualizer_name obj_det_data_visualizer
 ```
 
+# Depth Perception Demo
+
+Download <a href="https://drive.google.com/file/d/1yMPo_ux8tYT-gtinamRU-8qLPhmFmmUw/view?usp=sharing">Airsim Dataset</a>
+
+```bash
+python data_ingestion.py --input_dir ~/Downloads/2022-05-22-11-10-49 --pipeline_name depth_det --interpreter_name depth_interp_airsim
+```
 
 # Code Quality
 Static Code Analysis
