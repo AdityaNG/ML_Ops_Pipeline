@@ -1,6 +1,6 @@
 import os
 import glob
-
+import time
 import numpy as np
 import pandas as pd
 import xml.etree.ElementTree as ET
@@ -107,7 +107,8 @@ class obj_det_data_visualizer(pipeline_data_visualizer):
 				print(labels)
 				print(detections)
 				cv2.imshow('img', img)
-				cv2.waitKey(0)
+				cv2.waitKey(1)
+				time.sleep(1)
 
 class obj_det_evaluator:
 
@@ -268,7 +269,7 @@ obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': ob
 from depth_perception_demo import depth_input
 
 all_inputs = {}
-#all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input
+all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input
 all_inputs[depth_input.get_pipeline_name()] = depth_input
 
 

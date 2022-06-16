@@ -34,7 +34,7 @@ def main():
 					mod = model_classes[model_name]()
 					#mod.predict(dat['test'])
 					results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
-					print(results)
+					#print(results)
 					results_pkl = os.path.join(testing_dir, "results.pkl")
 					predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
 

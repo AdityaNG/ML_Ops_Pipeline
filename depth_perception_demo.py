@@ -1,7 +1,9 @@
+import time
 import pandas as pd
 import os
 import PIL
 import cv2
+from tqdm import tqdm
 from pipeline_input import *
 from constants import *
 
@@ -79,18 +81,52 @@ class depth_interp_airsim(pipeline_dataset_interpreter):
 class depth_data_visualizer(pipeline_data_visualizer):
 
 	def visualize(self, x, y, preds, mode='') -> None:
-		pass
+		print(x)
+		print(y)
+		for frame in preds:
+			all_frames = []
+			for index, row in frame.iterrows():
+				f = row['input']
+				input_img = cv2.imread(row['input_full'])
+				depth = row['depth']
+				cam_id, img_format = f.split("_")[2:4]
+				full_frame = cv2.vconcat([input_img, depth])
+				all_frames.append(full_frame)
+				cv2.imshow('depth_'+str(cam_id), full_frame)
+			#cv2.imshow('depth', cv2.hconcat(all_frames))
+			time.sleep(0.1)
+			cv2.waitKey(1)
+
 
 class depth_evaluator:
 
 	def evaluate(self, x: pd.DataFrame, y, plot=False):
-		preds = 0
-		for inxex, row in x.iterrows():
+		predict_results = []
+		for inxex, row in tqdm(x.iterrows(), total=x.shape[0]):
 			pred = self.predict(row)
+			predict_results.append(pred)
 		
 		results = 0
 		# TODO: implement evaluation
-		return results, preds
+		return results, predict_results
+
+
+	def evaluate_old(self, x: pd.DataFrame, y, plot=False):
+		predict_results = {
+			'input':[],'depth':[],'input_full':[]
+		}
+		for inxex, row in x.iterrows():
+			pred = self.predict(row)
+			for index2, row2 in pred.iterrows():
+				predict_results['input'] += [row2['input']]
+				predict_results['input_full'] += [row2['input_full']]
+				predict_results['depth'] += [row2['depth']]
+		
+		predict_results = pd.DataFrame(predict_results)
+		
+		results = 0
+		# TODO: implement evaluation
+		return results, predict_results
 
 class depth_pipeline_model(depth_evaluator, pipeline_model):
 
@@ -106,13 +142,13 @@ class depth_pipeline_model(depth_evaluator, pipeline_model):
 		# Runs prediction on list of values x of length n
 		# Returns a list of values of length n
 		predict_results = {
-			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
+			'input':[],'depth':[],'input_full':[]
 		}
 		# TODO: Implement prediction
-		print(x)
+
 		image_files = x["ImageFile"].split(";")
 		for image_path in image_files:
-			print(image_path)
+
 			f = image_path.split("/")[-1]
 			cam_id, img_format = f.split("_")[2:4]
 			img_format = int(img_format)
@@ -126,13 +162,103 @@ class depth_pipeline_model(depth_evaluator, pipeline_model):
 				print("Unknown format")
 
 			depth = self.model.eval(img)
-			cv2.imshow('depth_'+str(cam_id),depth)
-		cv2.waitKey(1)
+			predict_results['input'] += [f]
+			predict_results['input_full'] += [image_path]
+			predict_results['depth'] += [depth]
+			
+			#cv2.imshow('depth_'+str(cam_id),depth)
+		#cv2.waitKey(1)
 		predict_results = pd.DataFrame(predict_results)
 		return predict_results
+
+class depth_pipeline_monodepth2_mono_640x192(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='mono_640x192')
+
+class depth_pipeline_monodepth2_stereo_640x192(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='stereo_640x192')
+
+class depth_pipeline_monodepth2_mono_stereo_640x192(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='mono+stereo_640x192')
+
+
+class depth_pipeline_monodepth2_mono_no_pt_640x192(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='mono_no_pt_640x192')
+
+
+class depth_pipeline_monodepth2_stereo_no_pt_640x192(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='stereo_no_pt_640x192')
+
+
+class depth_pipeline_monodepth2_mono_stereo_no_pt_640x192(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='mono+stereo_no_pt_640x192')
+
+
+class depth_pipeline_monodepth2_mono_1024x320(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='mono_1024x320')
+
+
+class depth_pipeline_monodepth2_stereo_1024x320(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='stereo_1024x320')
+
+
+class depth_pipeline_monodepth2_mono_stereo_1024x320(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='mono+stereo_1024x320')
+
+
+class depth_pipeline_monodepth2_mono_640x192(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import monodepth2
+		self.model = monodepth2.monodepth2(model_name='mono_640x192')
+
+
+
+class depth_pipeline_manydepth(depth_pipeline_model, depth_evaluator, pipeline_model):
+
+	def load(self):
+		import manydepth
+		self.model = manydepth.manydepth()
 
 
 depth_input = pipeline_input("depth_det", {'depth_interp_airsim': depth_interp_airsim}, 
 	{
-		'depth_pipeline_model': depth_pipeline_model,
-	}, dict(), dict())
+		'depth_pipeline_monodepth2_mono_640x192': depth_pipeline_monodepth2_mono_640x192,
+		'depth_pipeline_monodepth2_stereo_640x192': depth_pipeline_monodepth2_stereo_640x192,
+		'depth_pipeline_monodepth2_mono_stereo_640x192': depth_pipeline_monodepth2_mono_stereo_640x192,
+		'depth_pipeline_monodepth2_mono_no_pt_640x192': depth_pipeline_monodepth2_mono_no_pt_640x192,
+		'depth_pipeline_monodepth2_stereo_no_pt_640x192': depth_pipeline_monodepth2_stereo_no_pt_640x192,
+		'depth_pipeline_monodepth2_mono_stereo_no_pt_640x192': depth_pipeline_monodepth2_mono_stereo_no_pt_640x192,
+		'depth_pipeline_monodepth2_mono_1024x320': depth_pipeline_monodepth2_mono_1024x320,
+		'depth_pipeline_monodepth2_stereo_1024x320': depth_pipeline_monodepth2_stereo_1024x320,
+		'depth_pipeline_monodepth2_mono_stereo_1024x320': depth_pipeline_monodepth2_mono_stereo_1024x320,
+		#'depth_pipeline_manydepth': depth_pipeline_manydepth
+	}, dict(), {
+		'depth_data_visualizer': depth_data_visualizer
+	})

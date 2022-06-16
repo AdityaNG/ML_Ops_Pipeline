@@ -12,7 +12,6 @@ import os
 import pickle
 import datetime
 
-from sqlalchemy import all_
 
 from constants import DATASET_DIR, MODEL_TESTING, DATA_BASE_DIR, MODEL_BASE
 from pipeline_input import pipeline_input
@@ -79,8 +78,8 @@ def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name
 	print("interpreter_name:\t",interpreter_name)
 	print("dataset_dir:\t",dataset_dir)
 
-	print(results)
-	print(predictions)
+	#print(results)
+	#print(predictions)
 
 	visualizer.visualize(dat['test']['x'], dat['test']['y'], predictions)
 
