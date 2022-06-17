@@ -180,7 +180,7 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 		predict_results = {
 			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
 		}
-		for image_path in x:
+		for image_path in tqdm(x):
 			img = cv2.imread(image_path)
 			results = self.model(image_path)
 			df = results.pandas().xyxyn[0]
@@ -251,7 +251,7 @@ class obj_det_pipeline_ensembler_1(obj_det_evaluator, pipeline_ensembler):
 		nms_res = pd.DataFrame(nms_res)
 		print(nms_res)
 		return nms_res
-		
+
 
 obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': obj_det_interp_1}, 
 	{

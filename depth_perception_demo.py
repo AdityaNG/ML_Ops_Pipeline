@@ -83,6 +83,8 @@ class depth_data_visualizer(pipeline_data_visualizer):
 	def visualize(self, x, y, preds, mode='') -> None:
 		print(x)
 		print(y)
+		writer = None
+
 		for frame in preds:
 			all_frames = []
 			for index, row in frame.iterrows():
@@ -92,10 +94,18 @@ class depth_data_visualizer(pipeline_data_visualizer):
 				cam_id, img_format = f.split("_")[2:4]
 				full_frame = cv2.vconcat([input_img, depth])
 				all_frames.append(full_frame)
-				cv2.imshow('depth_'+str(cam_id), full_frame)
+				#cv2.imshow('depth_'+str(cam_id), full_frame)
 			#cv2.imshow('depth', cv2.hconcat(all_frames))
-			time.sleep(0.1)
+			final_frame = cv2.hconcat([all_frames[0], all_frames[2], all_frames[3]])
+			cv2.imshow('depth', final_frame)
+			if writer is None:
+				size = final_frame.shape[:2]
+				print("size:", size)
+				writer = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 10, (size[1],size[0]))
+			writer.write(final_frame)
+			#time.sleep(0.3)
 			cv2.waitKey(1)
+		writer.release()
 
 
 class depth_evaluator:
