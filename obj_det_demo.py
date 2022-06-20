@@ -1,17 +1,14 @@
 import os
 import glob
-
+import time
 import numpy as np
 import pandas as pd
 import xml.etree.ElementTree as ET
 from tqdm import tqdm
 import cv2
 from keras.utils import np_utils
-from tensorflow.keras.optimizers import Adam
-from keras.callbacks import ModelCheckpoint
 import torch
 
-from helper import cnn_model, pure_cnn_model
 from pipeline_input import *
 from constants import *
 
@@ -110,7 +107,8 @@ class obj_det_data_visualizer(pipeline_data_visualizer):
 				print(labels)
 				print(detections)
 				cv2.imshow('img', img)
-				cv2.waitKey(0)
+				cv2.waitKey(1)
+				time.sleep(1)
 
 class obj_det_evaluator:
 
@@ -182,7 +180,7 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 		predict_results = {
 			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
 		}
-		for image_path in x:
+		for image_path in tqdm(x):
 			img = cv2.imread(image_path)
 			results = self.model(image_path)
 			df = results.pandas().xyxyn[0]
@@ -253,7 +251,7 @@ class obj_det_pipeline_ensembler_1(obj_det_evaluator, pipeline_ensembler):
 		nms_res = pd.DataFrame(nms_res)
 		print(nms_res)
 		return nms_res
-		
+
 
 obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': obj_det_interp_1}, 
 	{
@@ -268,8 +266,11 @@ obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': ob
 		'obj_det_data_visualizer': obj_det_data_visualizer
 	})
 
+from depth_perception_demo import depth_input
+
 all_inputs = {}
 all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input
+all_inputs[depth_input.get_pipeline_name()] = depth_input
 
 
 #########################################################################
