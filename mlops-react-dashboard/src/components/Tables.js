@@ -282,7 +282,7 @@ export const DatasetsTable = (props) => {
 			  </Pagination>
 			</Nav>
 			<small className="fw-bold">
-			  Showing <b>{totalDatasets}</b> out of <b>25</b> entries
+			  Showing <b>{totalDatasets}</b> out of <b>{totalDatasets}</b> entries
 			</small>
 		  </Card.Footer>
 		</Card.Body>
@@ -390,7 +390,7 @@ export const DatasetsTable = (props) => {
 			  </Pagination>
 			</Nav>
 			<small className="fw-bold">
-			  Showing <b>{totalDatasets}</b> out of <b>25</b> entries
+			  Showing <b>{totalDatasets}</b> out of <b>{totalDatasets}</b> entries
 			</small>
 		  </Card.Footer>
 		</Card.Body>
@@ -499,7 +499,7 @@ export const EnsemblesTable = (props) => {
 			  </Pagination>
 			</Nav>
 			<small className="fw-bold">
-			  Showing <b>{totalDatasets}</b> out of <b>25</b> entries
+			  Showing <b>{totalDatasets}</b> out of <b>{totalDatasets}</b> entries
 			</small>
 		  </Card.Footer>
 		</Card.Body>
