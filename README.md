@@ -26,12 +26,22 @@ python ensemble_analysis.py --single
 
 To visualize model results
 ```bash
-python model_visualizer.py --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection --dataset_name 2022-06-15_21:25:11.138663 --model_name obj_det_pipeline_model_yolov5s --visualizer_name obj_det_data_visualizer
+python model_visualizer.py \
+	--pipeline_name obj_det \
+	--interpreter_name karthika95-pedestrian-detection \
+	--dataset_name 2022-06-15_21:25:11.138663 \
+	--model_name obj_det_pipeline_model_yolov5s \
+	--visualizer_name obj_det_data_visualizer
 ```
 
 To visualize ensemble model results
 ```bash
-python ensemble_visualizer.py --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection --dataset_name 2022-06-15_21:25:11.138663 --ensemble_name obj_det_pipeline_ensembler_1 --visualizer_name obj_det_data_visualizer
+python ensemble_visualizer.py \
+	--pipeline_name obj_det \
+	--interpreter_name karthika95-pedestrian-detection \
+	--dataset_name 2022-06-15_21:25:11.138663 \
+	--ensemble_name obj_det_pipeline_ensembler_1 \
+	--visualizer_name obj_det_data_visualizer
 ```
 
 # Depth Perception Demo
@@ -39,7 +49,23 @@ python ensemble_visualizer.py --pipeline_name obj_det --interpreter_name karthik
 Download <a href="https://drive.google.com/file/d/1yMPo_ux8tYT-gtinamRU-8qLPhmFmmUw/view?usp=sharing">Airsim Dataset</a>
 
 ```bash
-python data_ingestion.py --input_dir ~/Downloads/2022-05-22-11-10-49 --pipeline_name depth_det --interpreter_name depth_interp_airsim
+python data_ingestion.py \
+	--input_dir ~/Downloads/2022-05-22-11-10-49 \
+	--pipeline_name depth_det \
+	--interpreter_name depth_interp_airsim
+```
+
+# Web UI
+
+Start the REST API server
+```bash
+FLASK_APP=rest_server.py FLASK_ENV=development flask run
+```
+
+Start the web UI
+```bash
+cd mlops-react-dashboard
+yarn start
 ```
 
 # Code Quality

@@ -11,6 +11,7 @@ MODEL_BASE = "data/{pipeline_name}/models/"
 MODEL_TRAINING = "data/{pipeline_name}/models/{model_name}/training/{interpreter_name}"
 MODEL_TESTING = "data/{pipeline_name}/models/{model_name}/testing/{interpreter_name}"
 
+ENSEMBLE_BASE = "data/{pipeline_name}/ensemblers/"
 ENSEMBLE_TRAINING = "data/{pipeline_name}/ensemblers/{ensembler_name}/training/{interpreter_name}"
 ENSEMBLE_TESTING = "data/{pipeline_name}/ensemblers/{ensembler_name}/testing/{interpreter_name}"
 
