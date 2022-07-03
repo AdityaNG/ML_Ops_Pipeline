@@ -1,3 +1,4 @@
+from cmath import inf
 import os
 import glob
 import time
@@ -8,9 +9,129 @@ from tqdm import tqdm
 import cv2
 from keras.utils import np_utils
 import torch
+import datetime
+
+from sklearn.model_selection import train_test_split
+
+import sys
+sys.path.append('../')
 
 from pipeline_input import *
 from constants import *
+
+class KITTI_lemenko_interp(pipeline_dataset_interpreter):
+
+	def load_calibration(self, calib_file_name):
+		calib = {}
+		f = open(calib_file_name, "r")
+		for line in f:
+			key_val = line.split(":")
+			if len(key_val)==2:
+				key, value = key_val
+				if key!='' and value!='':
+					value = np.array(list(map(float, value.strip().split(" "))))
+					calib[key] = value
+			elif len(key_val)==1:
+				pass # Last line, no issues
+			else:
+				raise Exception("Malformed Calib file: " + calib_file_name)
+		return calib
+
+	def load_labels(self, label_file_name):
+		return pd.read_csv(label_file_name, sep=" ", 
+                       names=['label', 'truncated', 'occluded', 'alpha', 
+                              'bbox_xmin', 'bbox_ymin', 'bbox_xmax', 
+                              'bbox_ymax', 'dim_height', 'dim_width', 'dim_length', 
+                              'loc_x', 'loc_y', 'loc_z', 'rotation_y'])
+		
+
+	def load(self) -> None:
+		print("Loading KITTI_lemenko_interp from:", self.input_dir)
+		data_object_calib = os.path.join(self.input_dir,"data_object_calib")
+		data_object_image_2 = os.path.join(self.input_dir,"data_object_image_2")
+		data_object_image_3 = os.path.join(self.input_dir,"data_object_image_3")
+		data_object_label_2 = os.path.join(self.input_dir,"data_object_label_2")
+
+		assert os.path.exists(data_object_calib), data_object_calib
+		assert os.path.exists(data_object_image_2), data_object_image_2
+		assert os.path.exists(data_object_image_3), data_object_image_3
+		assert os.path.exists(data_object_label_2), data_object_label_2
+
+		dataset = {}
+
+		for mode in ('testing', 'training'):
+			dataset[mode] = {
+				'image_2': [], 'image_3':[], 'calib': [], 'label_2': []
+			}
+			image_2_files_list = sorted(glob.glob(os.path.join(data_object_image_2, mode, "image_2", "*.png")))
+			files_list = list(map(lambda x: x.split("/")[-1].split(".png")[:-1][0], image_2_files_list))
+			#print(files_list)
+			print("KITTI_lemenko_interp: load", mode)
+			for f in tqdm(files_list):
+				calib_path = os.path.join(data_object_calib, mode, "calib", f+".txt")
+				image_2_path = os.path.join(data_object_image_2, mode, "image_2", f+".png")
+				image_3_path = os.path.join(data_object_image_3, mode, "image_3", f+".png")
+				label_2_path = os.path.join(data_object_label_2, mode, "label_2", f+".txt")
+					
+				assert os.path.exists(calib_path), calib_path
+				assert os.path.exists(image_2_path), image_2_path
+				assert os.path.exists(image_3_path), image_3_path
+				if mode=="training":
+					assert os.path.exists(label_2_path), label_2_path
+				
+				dataset[mode]['calib'] += [self.load_calibration(calib_path)]
+				dataset[mode]['image_2'] += [image_2_path]
+				dataset[mode]['image_3'] += [image_3_path]
+				if mode=='training':
+					dataset[mode]['label_2'] += [self.load_labels(label_2_path)]
+				else:
+					dataset[mode]['label_2'] += [None]
+			
+			dataset[mode] = pd.DataFrame(dataset[mode])
+		
+		xtrain, xtest = self.generate_data(dataset['training'])
+		self.dataset = {
+			'train': {
+				'x': xtrain["image"].unique(),
+				'y': xtrain
+			},
+			'test': {
+				'x': xtest["image"].unique(),
+				'y': xtest
+			}
+		}
+
+
+	def generate_data(self, dataset):
+		information={'xmin':[],'ymin':[],'xmax':[],'ymax':[],'name':[] ,'label':[], 'image':[]}
+		for index, row in dataset.iterrows():
+			kitti_labels = row['label_2']
+			for index2, row2 in kitti_labels.iterrows():
+				label = "None"
+				if row2['label'] == 'Pedestrian':
+					label = "person"
+				# elif row2['label'] == 'Car':
+				# 	label = "car"
+				else:
+					label = "DontCare"
+
+				#if label != "None":
+				if True:
+					information['xmin']+=[row2['bbox_xmin']]
+					information['ymin']+=[row2['bbox_ymin']]
+					information['xmax']+=[row2['bbox_xmax']]
+					information['ymax']+=[row2['bbox_ymax']]
+
+					#information['name']+=[row['image_2'].split("/")[-1]]
+					information['name']+=[row['image_2']]
+					#information['label']+=[label]
+					information['label']+=[row2['label']]
+					information['image']+=[row['image_2']]
+
+		information = pd.DataFrame(information)
+		#return information, information
+		return train_test_split(information, test_size=0.1, random_state=1)
+
 
 class obj_det_interp_1(pipeline_dataset_interpreter):
 	def load(self) -> None:
@@ -68,8 +189,7 @@ class obj_det_interp_1(pipeline_dataset_interpreter):
 
 class obj_det_data_visualizer(pipeline_data_visualizer):
 
-	def visualize(self, x, y, preds, mode='') -> None:
-		plot = 'plot' in mode
+	def visualize(self, x, y, preds, save_dir) -> None:
 		plot = True
 		image_names_list = y["name"].unique()
 		iou_list = []
@@ -79,7 +199,9 @@ class obj_det_data_visualizer(pipeline_data_visualizer):
 			'fp': 0, 	# 0<iou<thresh
 			'fn':0		# iou==0	
 		}
-		for image_name in image_names_list:
+		print("obj_det_data_visualizer: visualize")
+		for image_name in tqdm(image_names_list):
+			iou_list = []
 			labels = y[y["name"]==image_name]
 			detections = preds[preds["name"]==image_name]
 			for index1, lab in labels.iterrows():
@@ -96,19 +218,22 @@ class obj_det_data_visualizer(pipeline_data_visualizer):
 					else:
 						yolo_metrics['fp'] += 1
 				iou_list.append(largest_iou)
-			if plot:
-				image_path = labels["image"].iloc[0]
-				img = cv2.imread(image_path)
-				for index1, lab in labels.iterrows():
-					img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (255,0,0),2)
-				for index2, lab in detections.iterrows():
-					img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (0,255,0),2)
-				print(len(labels), len(detections))
-				print(labels)
-				print(detections)
-				cv2.imshow('img', img)
-				cv2.waitKey(1)
-				time.sleep(1)
+
+			image_path = labels["image"].iloc[0]
+			img = cv2.imread(image_path)
+			for index1, lab in labels.iterrows():
+				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (255,255,0),2)
+			for index2, lab in detections.iterrows():
+				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (0,255,0),2)
+				# print(len(labels), len(detections))
+				# print(labels)
+				# print(detections)
+			save_path = os.path.join(save_dir, str(datetime.datetime.now()).replace(" ", "_") + ".png")
+			#cv2.imshow("img", img)
+			#cv2.waitKey(0)
+			#time.sleep(0.5)
+			if min(iou_list)<0.5:
+				cv2.imwrite(save_path, img)
 
 class obj_det_evaluator:
 
@@ -122,7 +247,8 @@ class obj_det_evaluator:
 			'fp': 0, 	# 0<iou<thresh
 			'fn':0		# iou==0	
 		}
-		for image_name in image_names_list:
+		print("obj_det_evaluator")
+		for image_name in tqdm(image_names_list):
 			labels = y[y["name"]==image_name]
 			detections = preds[preds["name"]==image_name]
 			for index1, lab in labels.iterrows():
@@ -149,12 +275,11 @@ class obj_det_evaluator:
 				print(len(labels), len(detections))
 				print(labels)
 				print(detections)
-				cv2.imshow('img', img)
-				cv2.waitKey(0)
-		prec = yolo_metrics['tp'] / float(yolo_metrics['tp'] + yolo_metrics['fp'])
-		recall = yolo_metrics['tp'] / float(yolo_metrics['tp'] + yolo_metrics['fn'])
-		f1_score = 2*prec*recall/(prec+recall)
-		iou_avg = sum(iou_list) / len(iou_list)
+
+		prec = np.float64(yolo_metrics['tp']) / float(yolo_metrics['tp'] + yolo_metrics['fp'])
+		recall = np.float64(yolo_metrics['tp']) / float(yolo_metrics['tp'] + yolo_metrics['fn'])
+		f1_score = np.float64(2*prec*recall)/(prec+recall)
+		iou_avg = np.float64(sum(iou_list)) / len(iou_list)
 		results = {
 			'prec': prec,
 			'recall': recall,
@@ -162,6 +287,7 @@ class obj_det_evaluator:
 			'iou_avg': iou_avg,
 			'confusion': yolo_metrics
 		}
+		print(results)
 		return results, preds
 
 
@@ -170,9 +296,15 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 	def load(self):
 		self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
 		
-	def train(self, dataset):
-		# TODO: Training
-		pass
+	def train(self, x, y) -> np.array:
+		preds = self.predict(x)
+		image_names_list = y["name"].unique()
+		
+		results = {
+			'training_results': 0,
+		}
+		return results, preds
+
 		
 	def predict(self, x: dict) -> np.array:
 		# Runs prediction on list of values x of length n
@@ -180,6 +312,7 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 		predict_results = {
 			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
 		}
+		print("obj_det_pipeline_model: predict")
 		for image_path in tqdm(x):
 			img = cv2.imread(image_path)
 			results = self.model(image_path)
@@ -239,7 +372,9 @@ class obj_det_pipeline_ensembler_1(obj_det_evaluator, pipeline_ensembler):
 					scores.append(lab['confidence'])
 			indexes = cv2.dnn.NMSBoxes(boxes, scores,score_threshold=0.4,nms_threshold=0.8)
 			for ind in indexes:
-				i = ind[0]
+				i = ind
+				if type(ind)==list:
+					i = ind[0]
 				file_name = img_path.split('/')[-1][0:-4]
 				nms_res['xmin'] += [boxes[i][0]]
 				nms_res['ymin'] += [boxes[i][1]]
@@ -252,25 +387,40 @@ class obj_det_pipeline_ensembler_1(obj_det_evaluator, pipeline_ensembler):
 		print(nms_res)
 		return nms_res
 
+	def train(self, x, y) -> np.array:
+		preds = self.predict(x)
+		image_names_list = y["name"].unique()
+		
+		results = {
+			'training_results': 0,
+		}
+		return results, preds
 
-obj_det_input = pipeline_input("obj_det", {'karthika95-pedestrian-detection': obj_det_interp_1}, 
-	{
+
+obj_det_input = pipeline_input("obj_det", 
+	p_dataset_interpreter={
+		# 'KITTI_lemenko_interp':KITTI_lemenko_interp,
+		'karthika95-pedestrian-detection': obj_det_interp_1, 
+	}, 
+	p_model={
 		'obj_det_pipeline_model_yolov5n': obj_det_pipeline_model_yolov5n,
-		'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
-		'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
-		'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
-		'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
-	}, {
+		# 'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
+		# 'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
+		# 'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
+		# 'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
+	}, 
+	p_ensembler={
 		'obj_det_pipeline_ensembler_1': obj_det_pipeline_ensembler_1
-	}, {
+	}, 
+	p_vizualizer={
 		'obj_det_data_visualizer': obj_det_data_visualizer
 	})
 
-from depth_perception_demo import depth_input
-
-all_inputs = {}
-all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input
-all_inputs[depth_input.get_pipeline_name()] = depth_input
+#from depth_perception_demo import depth_input
+exported_pipeline = obj_det_input
+#all_inputs = {}
+#all_inputs[obj_det_input.get_pipeline_name()] = obj_det_input
+#all_inputs[depth_input.get_pipeline_name()] = depth_input
 
 
 #########################################################################
