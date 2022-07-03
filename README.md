@@ -5,6 +5,8 @@ A simple demonstration of an ML Ops pipeline involving three stages:
 2. Model Training
 3. Model Analysis
 
+To add your own pipeline, model, datasets, etc., take a look at <a href="pipelines/README.md">pipelines/README.md</a>
+
 # Getting started
 
 Download and unzip the <a href="https://www.kaggle.com/datasets/karthika95/pedestrian-detection">karthika95-pedestrian-detection kaggle dataset</a> to `~/Downloads/karthika95-pedestrian-detection/`.
@@ -12,6 +14,8 @@ Download and unzip the <a href="https://www.kaggle.com/datasets/karthika95/pedes
 Data ingestion can be run with the following. It will validate the dataset and store it to `data/`.
 ```bash
 python data_ingestion.py --input_dir ~/Downloads/karthika95-pedestrian-detection/ --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection
+
+python3 data_ingestion.py --input_dir ~/datasets/klemenko-kitti-dataset/ --pipeline_name obj_det --interpreter_name KITTI_lemenko_interp
 ```
 
 To generate individual model outputs, run as follows.
@@ -44,6 +48,22 @@ python ensemble_visualizer.py \
 	--visualizer_name obj_det_data_visualizer
 ```
 
+# Running as a systemd service
+The file <a href="mlops.service">mlops.service</a> is to be copied to `/etc/systemd/system/`. The service can then be started and status can be checked on using the following commands.
+```bash
+sudo cp mlops.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start mlops.service
+sudo systemctl status mlops.service
+```
+
+To view the logs of a specific subprocess, use the tmux script
+```bash
+./logs.sh
+# OR
+tmux source-file mlops.tmux
+```
+
 # Depth Perception Demo
 
 Download <a href="https://drive.google.com/file/d/1yMPo_ux8tYT-gtinamRU-8qLPhmFmmUw/view?usp=sharing">Airsim Dataset</a>
@@ -65,6 +85,7 @@ FLASK_APP=rest_server.py FLASK_ENV=development flask run
 Start the web UI
 ```bash
 cd mlops-react-dashboard
+yarn install
 yarn start
 ```
 
