@@ -1,19 +1,15 @@
 """
-data_ingestion
-
-Takes a path as input along with pipeline name and the interpreter name
-Reads the dataset using the said pipeline's specified interpreter
-If the interpreter raises no errors, the path is copied into datasets
-If any errrors occur or assertions fail, path is rejected
+Model visuals
 """
 from distutils.dir_util import copy_tree
 import traceback
 import os
 import pickle
 import datetime
+import glob
 
-
-from constants import DATASET_DIR, MODEL_TESTING, DATA_BASE_DIR, MODEL_BASE
+from all_pipelines import get_all_inputs
+from constants import DATASET_DIR, MODEL_TESTING, DATA_BASE_DIR, MODEL_BASE, MODEL_VISUAL
 from pipeline_input import pipeline_input
 
 def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name: str, model_name: str, visualizer_name: str):
@@ -73,20 +69,27 @@ def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name
 	predictions = pickle.load(predictions_handle)
 	predictions_handle.close()
 
-	print("-"*os.get_terminal_size().columns)
+	visual_dir = MODEL_VISUAL.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
+	os.makedirs(visual_dir, exist_ok=True)
+
+	visual_files = glob.glob(os.path.join(visual_dir, "*"))
+	for vf in visual_files:
+		os.remove(vf)
+
+	print("-"*10)
 	print("model_name:\t",model_name)
 	print("interpreter_name:\t",interpreter_name)
 	print("dataset_dir:\t",dataset_dir)
+	print("visual_dir:\t",visual_dir)
 
 	#print(results)
 	#print(predictions)
 
-	visualizer.visualize(dat['test']['x'], dat['test']['y'], predictions)
+	visualizer.visualize(dat['test']['x'], dat['test']['y'], predictions, visual_dir)
 
 
 
 if __name__=="__main__":
-	from obj_det_demo import all_inputs
 	import argparse
 
 	parser = argparse.ArgumentParser()
