@@ -9,8 +9,11 @@ from keras.utils import np_utils
 from tensorflow.keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 
+import sys
+sys.path.append('../')
+
 from helper import cnn_model
-from pipeline_input import *
+from pipeline_input import pipeline_data_visualizer, pipeline_dataset_interpreter, pipeline_ensembler, pipeline_model, pipeline_input
 from constants import *
 
 class cifar10_interp_1(pipeline_dataset_interpreter):
@@ -68,7 +71,7 @@ class cifar10_pipeline_model_1(pipeline_model):
 		
 		self.__model_details = self.__model.fit(images_train, class_train,
 						batch_size = 128,
-						epochs = NUM_EPOCH, # number of iterations
+						epochs = 10, # number of iterations
 						validation_data= (images_test, class_test),
 						callbacks=[checkpoint, tensorboard_callback],
 						verbose=1)
@@ -82,7 +85,9 @@ class cifar10_pipeline_ensembler_1(pipeline_ensembler):
 			xm[i] = np.argmax(x[i])
 		return xm
 
-cifar10_input = pipeline_input("cifar10_cnn", {'cifar10_interp_1': cifar10_interp_1}, {'cifar10_pipeline_model_1': cifar10_pipeline_model_1}, {'cifar10_pipeline_ensembler_1': cifar10_pipeline_ensembler_1})
+cifar10_input = pipeline_input("cifar10_cnn", {'cifar10_interp_1': cifar10_interp_1}, {'cifar10_pipeline_model_1': cifar10_pipeline_model_1}, {'cifar10_pipeline_ensembler_1': cifar10_pipeline_ensembler_1}, {})
 
-all_inputs = {}
-all_inputs[cifar10_input.get_pipeline_name()] = cifar10_input
+# exported_pipeline = cifar10_input
+
+#all_inputs = {}
+#all_inputs[cifar10_input.get_pipeline_name()] = cifar10_input
