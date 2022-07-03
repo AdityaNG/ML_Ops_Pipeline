@@ -162,3 +162,6 @@ data/
 *.h5
 *.pt
 *.csv
+
+logs/
+history/
