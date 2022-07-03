@@ -1,18 +1,14 @@
 """
-data_ingestion
-
-Takes a path as input along with pipeline name and the interpreter name
-Reads the dataset using the said pipeline's specified interpreter
-If the interpreter raises no errors, the path is copied into datasets
-If any errrors occur or assertions fail, path is rejected
+Ensemble visualiser
 """
 from distutils.dir_util import copy_tree
 import traceback
 import os
 import pickle
 import datetime
+import glob
 
-from constants import DATASET_DIR, ENSEMBLE_TESTING, MODEL_TESTING, DATA_BASE_DIR, MODEL_BASE
+from constants import DATASET_DIR, ENSEMBLE_TESTING, MODEL_TESTING, DATA_BASE_DIR, MODEL_BASE, ENSEMBLE_VISUAL
 from pipeline_input import pipeline_input
 
 def vizualize_ensemble(p_input: pipeline_input, interpreter_name: str, dataset_name: str, ensemble_name: str, visualizer_name: str):
@@ -23,7 +19,7 @@ def vizualize_ensemble(p_input: pipeline_input, interpreter_name: str, dataset_n
 		print("Interpreter does not exist")
 		print("List of available interpreters for pipeline=", pipeline_name)
 		print("\n".join(all_dataset_interpreters.keys()))
-		exit()
+		return
 	
 	dataset_interp = p_input.get_pipeline_dataset_interpreter_by_name(interpreter_name)
 	all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
@@ -35,7 +31,7 @@ def vizualize_ensemble(p_input: pipeline_input, interpreter_name: str, dataset_n
 		print("Dataset does not exist")
 		print("List of available datasets for interpreter=", interpreter_name)
 		print("\n".join(os.listdir(interpreter_dataset_dir)))
-		exit()
+		return
 	
 	dat = dataset_interp(dataset_dir).get_dataset()
 
@@ -61,21 +57,21 @@ def vizualize_ensemble(p_input: pipeline_input, interpreter_name: str, dataset_n
 		print("List of available Ensemble models for pipeline=", pipeline_name)
 		#print("\n".join(os.listdir(MODEL_BASE.format(pipeline_name=pipeline_name))))
 		print("\n".join(ensemble_classes.keys()))
-		exit()
+		return
 
 	ens_results_pkl = os.path.join(ens_testing_dir, "results.pkl")
 	ens_predictions_pkl = os.path.join(ens_testing_dir, "predictions.pkl")
 
 	if not os.path.exists(results_pkl) or not os.path.exists(predictions_pkl):
 		print("Analysis data for the given combination has not been generated yet")
-		exit()
+		return
 
 	visualizer_classes = p_input.get_pipeline_visualizer()
 	if visualizer_name=='' or visualizer_name not in visualizer_classes:
 		print("Vizualizer does not exist")
 		print("List of available Ensemble Vizualizer for pipeline=", pipeline_name)
 		print("\n".join(visualizer_classes.keys()))
-		exit()
+		return
 	visualizer = p_input.get_pipeline_visualizer_by_name(visualizer_name)()
 
 	ens_results_handle = open(ens_results_pkl, 'rb')
@@ -86,18 +82,26 @@ def vizualize_ensemble(p_input: pipeline_input, interpreter_name: str, dataset_n
 	ens_predictions = pickle.load(ens_predictions_handle)
 	ens_predictions_handle.close()
 
-	print("-"*os.get_terminal_size().columns)
+	visual_dir = ENSEMBLE_VISUAL.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensemble_name)
+	os.makedirs(visual_dir, exist_ok=True)
+
+	visual_files = glob.glob(os.path.join(visual_dir, "*"))
+	for vf in visual_files:
+		os.remove(vf)
+
+	print("-"*10)
 	print("ensemble_classes:\t",ensemble_classes)
 	print("interpreter_name:\t",interpreter_name)
 	print("dataset_dir:\t",dataset_dir)
+	print("visual_dir:\t",visual_dir)
 
 	print(results)
 	print(predictions)
 
-	visualizer.visualize(dat['test']['x'], dat['test']['y'], ens_predictions)
+	visualizer.visualize(dat['test']['x'], dat['test']['y'], ens_predictions, visual_dir)
 
 if __name__=="__main__":
-	from obj_det_demo import all_inputs
+	from all_pipelines import get_all_inputs
 	import argparse
 
 	parser = argparse.ArgumentParser()
