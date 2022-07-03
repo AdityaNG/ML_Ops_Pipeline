@@ -14,7 +14,7 @@ import datetime
 from constants import DATASET_DIR
 from pipeline_input import pipeline_input
 
-def ingest_data(p_input: pipeline_input, INTERPRETER_NAME: str, input_dir: str):
+def ingest_data(p_input: pipeline_input, INTERPRETER_NAME: str, input_dir: str, validate_only=False):
 	assert isinstance(p_input, pipeline_input)
 	dataset_interp_class = p_input.get_pipeline_dataset_interpreter_by_name(INTERPRETER_NAME)
 	pipeline_name = p_input.get_pipeline_name()
@@ -22,11 +22,15 @@ def ingest_data(p_input: pipeline_input, INTERPRETER_NAME: str, input_dir: str):
 	os.makedirs(PIPELINE_BASE_FOLDER, exist_ok=True)
 	BASE_FOLDER_ID = os.path.join(PIPELINE_BASE_FOLDER, INTERPRETER_NAME, str(datetime.datetime.now()).replace(" ", "_"))
 	try:
-		dataset_interp_class(input_dir)
-		print("Interpreter accepted, copying...")
-		print(input_dir, '->',BASE_FOLDER_ID)
-		os.makedirs(BASE_FOLDER_ID, exist_ok=True)
-		copy_tree(input_dir, BASE_FOLDER_ID)
+		dat = dataset_interp_class(input_dir)
+		print("Interpreter accepted")
+		if not validate_only:
+			print("COPYING...")
+			print(input_dir, '->',BASE_FOLDER_ID)
+			os.makedirs(BASE_FOLDER_ID, exist_ok=True)
+			copy_tree(input_dir, BASE_FOLDER_ID)
+		else:
+			print(dat.get_dataset())
 	except AssertionError as ex:
 		print("Interpreter rejected, aborting...")
 		print(ex)
@@ -34,12 +38,14 @@ def ingest_data(p_input: pipeline_input, INTERPRETER_NAME: str, input_dir: str):
 
 
 if __name__=="__main__":
-	from obj_det_demo import all_inputs
+	from all_pipelines import get_all_inputs
+	all_inputs = get_all_inputs()
 	import argparse
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--input_dir', type=str, required=True)
 	parser.add_argument('--pipeline_name', type=str, required=True)
 	parser.add_argument('--interpreter_name', type=str, required=True)
+	parser.add_argument('--validate_only', action='store_true')
 	args = parser.parse_args()
-	ingest_data(all_inputs[args.pipeline_name], args.interpreter_name, args.input_dir)
+	ingest_data(all_inputs[args.pipeline_name], args.interpreter_name, args.input_dir, args.validate_only)
