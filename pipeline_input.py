@@ -36,11 +36,12 @@ class pipeline_model:
 		if load:
 			self.load()
 
+
 	def get_model(self) -> tf.keras.Model:
 		return self.model
 
 	def load(self) -> None:
-		# Load the model into self.__model
+		# Load the model into self.model
 		pass
 
 	def predict(self, x: np.array) -> np.array:
@@ -50,6 +51,10 @@ class pipeline_model:
 
 	def evaluate(self, x, y) -> np.array:
 		pass
+
+	def train(self, x, y) -> np.array:
+		pass
+
 
 class pipeline_ensembler:
 
@@ -63,11 +68,15 @@ class pipeline_ensembler:
 		
 	def evaluate(self, x, y) -> np.array:
 		pass
+	
+	def train(self, x, y) -> np.array:
+		pass
 
 class pipeline_data_visualizer:
 
-	def visualize(self, dataset, results, mode='') -> None:
+	def visualize(self, dataset_x, dataset_y, results, directory) -> None:
 		# Visualize the data
+		# TODO Save data to the given directory
 		pass
 
 

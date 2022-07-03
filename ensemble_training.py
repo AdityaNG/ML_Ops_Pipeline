@@ -16,7 +16,7 @@ import time
 
 import json
 
-from constants import MODEL_TESTING, ENSEMBLE_TESTING, DATASET_DIR
+from constants import MODEL_TRAINING, ENSEMBLE_TRAINING, DATASET_DIR
 from all_pipelines import get_all_inputs
 from history import local_history
 
@@ -80,10 +80,10 @@ def main():
 				model_predictions = {}
 				for model_name in model_classes:
 
-					testing_dir = MODEL_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
-					os.makedirs(testing_dir, exist_ok=True)
-					results_pkl = os.path.join(testing_dir, "results.pkl")
-					predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+					training_dir = MODEL_TRAINING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
+					os.makedirs(training_dir, exist_ok=True)
+					results_pkl = os.path.join(training_dir, "results.pkl")
+					predictions_pkl = os.path.join(training_dir, "predictions.pkl")
 					
 					results_handle = open(results_pkl, 'rb')
 					results = pickle.load(results_handle)
@@ -101,14 +101,14 @@ def main():
 					print("ensembler_name:\t",ensembler_name)
 					print("interpreter_name:\t",interpreter_name)
 					print("dataset_dir:\t",dataset_dir)
-					ens_testing_dir = ENSEMBLE_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
+					ens_training_dir = ENSEMBLE_TRAINING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
 					ens = ensemble_classes[ensembler_name]()
-					#mod.predict(dat['test'])
-					ens_results, ens_predictions = ens.evaluate(model_predictions, dat['test']['y'])
+					#mod.predict(dat['train'])
+					ens_results, ens_predictions = ens.evaluate(model_predictions, dat['train']['y'])
 					print(results)
 					
-					ens_results_pkl = os.path.join(ens_testing_dir, "results.pkl")
-					ens_predictions_pkl = os.path.join(ens_testing_dir, "predictions.pkl")
+					ens_results_pkl = os.path.join(ens_training_dir, "results.pkl")
+					ens_predictions_pkl = os.path.join(ens_training_dir, "predictions.pkl")
 
 					ens_results_handle = open(ens_results_pkl, 'wb')
 					pickle.dump(ens_results, ens_results_handle, protocol=pickle.HIGHEST_PROTOCOL)

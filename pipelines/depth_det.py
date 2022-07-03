@@ -4,6 +4,10 @@ import os
 import PIL
 import cv2
 from tqdm import tqdm
+
+import sys
+sys.path.append('../')
+
 from pipeline_input import *
 from constants import *
 
@@ -272,3 +276,6 @@ depth_input = pipeline_input("depth_det", {'depth_interp_airsim': depth_interp_a
 	}, dict(), {
 		'depth_data_visualizer': depth_data_visualizer
 	})
+
+
+# exported_pipeline = depth_input

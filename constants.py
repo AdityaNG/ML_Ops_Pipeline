@@ -3,33 +3,25 @@ import os
 DATA_BASE_DIR = "data/"
 RAW_DATASET_DIR = "data/{pipeline_name}/raw_datasets/"
 DATASET_DIR = "data/{pipeline_name}/datasets/"
-
+LOG_DIR = "logs/"
 #MODEL_TRAINING_SETTINGS = "data/{pipeline_name}/model_training_settings.pkl"
 #MODEL_VALIDATION_SETTINGS = "data/{pipeline_name}/model_validation_settings.pkl"
 
 MODEL_BASE = "data/{pipeline_name}/models/"
 MODEL_TRAINING = "data/{pipeline_name}/models/{model_name}/training/{interpreter_name}"
 MODEL_TESTING = "data/{pipeline_name}/models/{model_name}/testing/{interpreter_name}"
+MODEL_VISUAL = "data/{pipeline_name}/models/{model_name}/visual/{interpreter_name}"
 
 ENSEMBLE_BASE = "data/{pipeline_name}/ensemblers/"
 ENSEMBLE_TRAINING = "data/{pipeline_name}/ensemblers/{ensembler_name}/training/{interpreter_name}"
 ENSEMBLE_TESTING = "data/{pipeline_name}/ensemblers/{ensembler_name}/testing/{interpreter_name}"
+ENSEMBLE_VISUAL = "data/{pipeline_name}/ensemblers/{ensembler_name}/visual/{interpreter_name}"
 
-# Hight and width of the images
-IMAGE_SIZE = 32
-# 3 channels, Red, Green and Blue
-CHANNELS = 3
-# Number of epochs
-#NUM_EPOCH = 350
-NUM_EPOCH = 1
-# learning rate
-LEARN_RATE = 1.0e-4
+HISTORY_PATH = "history/"
 
-SLEEP_TIME = 1
-
-if __name__=="__main__":
-	#from cifar10_demo import all_inputs
-	from obj_det_demo import all_inputs
+def generate_tree():
+	from all_pipelines import get_all_inputs
+	all_inputs = get_all_inputs()
 	for pipeline_name in all_inputs:
 		raw_dataset_dir = RAW_DATASET_DIR.format(pipeline_name=pipeline_name)
 		os.makedirs(raw_dataset_dir, exist_ok=True)
@@ -60,3 +52,6 @@ if __name__=="__main__":
 				os.makedirs(testing_dir, exist_ok=True)
 				print(testing_dir)
 				print('\t',ensembler_name, ensemblers[ensembler_name])
+
+if __name__=="__main__":
+	generate_tree()
