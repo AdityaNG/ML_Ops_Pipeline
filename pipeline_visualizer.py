@@ -73,7 +73,7 @@ def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name
 	predictions = pickle.load(predictions_handle)
 	predictions_handle.close()
 
-	print("-"*os.get_terminal_size().columns)
+	print("-"*10)
 	print("model_name:\t",model_name)
 	print("interpreter_name:\t",interpreter_name)
 	print("dataset_dir:\t",dataset_dir)
@@ -86,7 +86,7 @@ def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name
 
 
 if __name__=="__main__":
-	from obj_det_demo import all_inputs
+	from all_pipelines import get_all_inputs
 	import argparse
 
 	parser = argparse.ArgumentParser()
