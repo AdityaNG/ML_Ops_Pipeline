@@ -1,7 +1,10 @@
 from flask import Flask, json, jsonify
 
+from datetime import datetime
 import os
 import glob
+
+from sklearn import pipeline
 from constants import DATASET_DIR, DATA_BASE_DIR, MODEL_BASE, MODEL_TESTING, ENSEMBLE_BASE, ENSEMBLE_TESTING
 import pickle
 from flask_cors import CORS
@@ -19,6 +22,19 @@ def get_pipelines():
 	# Method 2: Generate list from data/ directory
 	pipeline_list = os.listdir(DATA_BASE_DIR)
 	return jsonify({'pipelines': pipeline_list})
+
+@api.route('/pipelines/code', methods=['GET'])
+def get_pipelines_code():
+	pipeline_name = "obj_det"
+	pipleline_file_path = os.path.join("pipelines", pipeline_name+".py")
+	print(pipleline_file_path)
+	if os.path.exists(pipleline_file_path):
+		with open(pipleline_file_path, 'r') as pipleline_file:
+			return jsonify({'pipelines': pipleline_file.read()})
+	else:
+		# TODO: Load template code
+		return jsonify({'pipelines': 'EMPTY'})
+
 
 @api.route('/datasets', methods=['GET'])
 def get_datasets():
@@ -82,8 +98,10 @@ def get_models():
 			"size": sizeof_fmt(get_size(model_dir)),
 			"issueDate": time_stamp,
 			"name": model_name,
+			"score": str(scores_list),
 			"scores_list": scores_list,
-			"status": "Done"
+			"status": "Done",
+			"last_update": datetime.fromtimestamp(os.path.getmtime(model_dir))
 		})
 	return jsonify({'models': models_list})
 
@@ -130,8 +148,10 @@ def get_ensembles():
 			"size": sizeof_fmt(get_size(ensemble_dir)),
 			"issueDate": time_stamp,
 			"name": ensemble_name,
+			"score": str(scores_list),
 			"scores_list": scores_list,
-			"status": "Done"
+			"status": "Done",
+			"last_update": datetime.fromtimestamp(os.path.getmtime(ensemble_dir))
 		})
 	return jsonify({'ensembles': ensembles_list})
 
