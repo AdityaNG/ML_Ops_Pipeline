@@ -1,110 +1,148 @@
-from xml.parsers.expat import model
-from helper import pure_cnn_model, cnn_model
-from constants import *
+"""
+model_analysis
+"""
+
 import glob
 import pickle
-
-import numpy as np
-import matplotlib
-from matplotlib import pyplot as plt
-from keras.models import Sequential
-from tensorflow.keras.optimizers import Adam, SGD
-from keras.callbacks import ModelCheckpoint
-from keras.constraints import maxnorm
-from keras.models import load_model
-from keras.preprocessing.image import ImageDataGenerator
-import tensorflow as tf
+import os
 import time
-import datetime
+import inspect
+from datetime import datetime
 
-from pipeline_input import *
-from cifar10_demo import all_inputs
+import json
+
+from all_pipelines import get_all_inputs
+from constants import DATASET_DIR, MODEL_TRAINING, MODEL_TRAINING
+
+
+from history import local_history
 
 def main():
-	all_pipelines = all_inputs.keys()
-	for p in all_pipelines:
-		training_settings = {
-			"datasets": set()
-		}
-		MODEL_TRAINING_SETTINGS
-		if os.path.exists(MODEL_TRAINING_SETTINGS):
-			with open(MODEL_TRAINING_SETTINGS, 'rb') as handle:
-				training_settings = pickle.load(handle)
+	loc_hist = local_history(__file__)
+	task_list = {}
+	all_inputs = get_all_inputs()
 
-
-		all_datasets = set(glob.glob(os.path.join(DATASET_DIR, p, "*.pkl")))
-		new_datasets = all_datasets.difference(training_settings['datasets'])
-
-		#new_datasets = {"data/dataset/2022-06-08 19:23:13.707565.pkl"}
-
-		if len(new_datasets)>0:
-			print("Training on new datasets: {}".format(new_datasets))
-			for dataset_path in new_datasets:
-				with open(dataset_path, 'rb') as handle:
-					dataset = pickle.load(handle)
-					trained_model_save_path = os.path.join(MODEL_CHECKPOINTS, os.path.basename(dataset_path))
-					log_dir = os.path.join(trained_model_save_path.replace(".pkl",""), "logs")
-					trained_model_and_model_details = train_on_dataset(dataset, log_dir)
-					
-					print("Saving trained_model to: {}".format(trained_model_save_path))
-					with open(trained_model_save_path, 'wb') as handle:
-						pickle.dump(trained_model_and_model_details, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-		else:
-			print("No new datasets found")
-			print("Sleeping for",SLEEP_TIME,"sec")
-			time.sleep(SLEEP_TIME)
-
-		training_settings["datasets"] = all_datasets
-
-		print("Saving training_settings to: {}".format(MODEL_TRAINING_SETTINGS))
-		with open(MODEL_TRAINING_SETTINGS, 'wb') as handle:
-			pickle.dump(training_settings, handle, protocol=pickle.HIGHEST_PROTOCOL)
-			
-
-def main_old():
-	training_settings = {
-		"datasets": set()
-	}
-
-	if os.path.exists(MODEL_TRAINING_SETTINGS):
-		with open(MODEL_TRAINING_SETTINGS, 'rb') as handle:
-			training_settings = pickle.load(handle)
-
-
-	all_datasets = set(glob.glob(os.path.join(DATASET_DIR, "*.pkl")))
-	new_datasets = all_datasets.difference(training_settings['datasets'])
-
-	#new_datasets = {"data/dataset/2022-06-08 19:23:13.707565.pkl"}
-
-	if len(new_datasets)>0:
-		print("Training on new datasets: {}".format(new_datasets))
-		for dataset_path in new_datasets:
-			with open(dataset_path, 'rb') as handle:
-				dataset = pickle.load(handle)
-				trained_model_save_path = os.path.join(MODEL_CHECKPOINTS, os.path.basename(dataset_path))
-				log_dir = os.path.join(trained_model_save_path.replace(".pkl",""), "logs")
-				trained_model_and_model_details = train_on_dataset(dataset, log_dir)
+	for pipeline_name in all_inputs:
+		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
+		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
+		for interpreter_name in interpreters:
+			interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
+			interpreter_datasets = glob.glob(os.path.join(interpreter_dataset_dir,"*"))
+			for dataset_dir in interpreter_datasets:
 				
-				print("Saving trained_model to: {}".format(trained_model_save_path))
-				with open(trained_model_save_path, 'wb') as handle:
-					pickle.dump(trained_model_and_model_details, handle, protocol=pickle.HIGHEST_PROTOCOL)
+				model_classes = all_inputs[pipeline_name].get_pipeline_model()
+				for model_name in model_classes:
+					
+					model_file_path = inspect.getfile(model_classes[model_name])
+					model_last_modified = datetime.fromtimestamp(os.path.getmtime(model_file_path))
+					task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir
+					
+					if loc_hist[task_id] != model_last_modified:
+						task_list.setdefault(pipeline_name, {})
+						task_list[pipeline_name].setdefault(interpreter_name, {})
+						task_list[pipeline_name][interpreter_name].setdefault(dataset_dir, {})
+						task_list[pipeline_name][interpreter_name][dataset_dir].setdefault(model_name, (task_id, model_last_modified))
 
-	else:
-		print("No new datasets found")
-		print("Sleeping for",SLEEP_TIME,"sec")
-		time.sleep(SLEEP_TIME)
+	if task_list == {}:
+		print("Waiting for new tasks...")
+		time.sleep(5)
+		return
 
-	training_settings["datasets"] = all_datasets
+	print("-"*10)
+	print("Task list:\n", json.dumps(task_list, sort_keys=True, indent=4))
+	print("-"*10)
 
-	print("Saving training_settings to: {}".format(MODEL_TRAINING_SETTINGS))
-	with open(MODEL_TRAINING_SETTINGS, 'wb') as handle:
-		pickle.dump(training_settings, handle, protocol=pickle.HIGHEST_PROTOCOL)
+	for pipeline_name in task_list:
+		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
+		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
+		for interpreter_name in task_list[pipeline_name].keys():
+			interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
+			interpreter_datasets = task_list[pipeline_name][interpreter_name].keys()
+			for dataset_dir in interpreter_datasets:
+				
+				dat = interpreters[interpreter_name](dataset_dir).get_dataset()
+				model_classes = all_inputs[pipeline_name].get_pipeline_model()
+				for model_name in task_list[pipeline_name][interpreter_name][dataset_dir].keys():
+					print("-"*10)
+					print("model_name:\t",model_name)
+					print("interpreter_name:\t",interpreter_name)
+					print("dataset_dir:\t",dataset_dir)
+					training_dir = MODEL_TRAINING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						model_name=model_name
+					)
+					os.makedirs(training_dir, exist_ok=True)
+					mod = model_classes[model_name]()
+					#mod.predict(dat['test'])
+					results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
+					#print(results)
+					results_pkl = os.path.join(training_dir, "results.pkl")
+					predictions_pkl = os.path.join(training_dir, "predictions.pkl")
 
+					results_handle = open(results_pkl, 'wb')
+					pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					results_handle.close()
+
+					predictions_handle = open(predictions_pkl, 'wb')
+					pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					predictions_handle.close()
+					
+					task_id, model_last_modified = task_list[pipeline_name][interpreter_name][dataset_dir][model_name]
+					loc_hist[task_id] = model_last_modified
+
+def mainOLD():
+	for pipeline_name in all_inputs:
+		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
+		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
+		for interpreter_name in interpreters:
+			interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
+			interpreter_datasets = glob.glob(os.path.join(interpreter_dataset_dir,"*"))
+			for dataset_dir in interpreter_datasets:
+				dat = interpreters[interpreter_name](dataset_dir).get_dataset()
+				model_classes = all_inputs[pipeline_name].get_pipeline_model()
+				for model_name in model_classes:
+					print("-"*10)
+					print("model_name:\t",model_name)
+					print("interpreter_name:\t",interpreter_name)
+					print("dataset_dir:\t",dataset_dir)
+					training_dir = MODEL_TRAINING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						model_name=model_name
+					)
+					os.makedirs(training_dir, exist_ok=True)
+					mod = model_classes[model_name]()
+					#mod.predict(dat['test'])
+					train_results, train_predictions = mod.train(dat['train']['x'], dat['train']['y'])
+					#print(results)
+					results_pkl = os.path.join(training_dir, "results.pkl")
+					predictions_pkl = os.path.join(training_dir, "predictions.pkl")
+
+					results_handle = open(results_pkl, 'wb')
+					pickle.dump(train_results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					results_handle.close()
+
+					predictions_handle = open(predictions_pkl, 'wb')
+					pickle.dump(train_predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					predictions_handle.close()
 
 if __name__ == "__main__":
+	import traceback
+	import argparse
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--single', action='store_true', help='Run the loop only once')
+	args = parser.parse_args()
+
+	if args.single:
+		main()
+		exit()
+		
 	while True:
 		try:
 			main()
 		except Exception as e:
+			traceback.print_exc()
 			print("Exception: {}".format(e))
+			time.sleep(1)
