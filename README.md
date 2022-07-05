@@ -89,6 +89,11 @@ yarn install
 yarn start
 ```
 
+Install this specific version of `browsepy`
+```bash
+python -m pip install git+https://github.com/AdityaNG/browsepy.git@galary_support
+```
+
 # Code Quality
 Static Code Analysis
 ```bash

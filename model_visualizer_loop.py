@@ -37,8 +37,12 @@ def main():
 						model_name=model_name
 					)
 					
-					model_results_last_modified = max(os.path.getmtime(inspect.getfile(f)) for f in os.walk(testing_dir))
-					model_results_last_modified = datetime.fromtimestamp(model_results_last_modified)
+					last_modified = []
+					for path, directories, files in os.walk(testing_dir):
+						for file in files:
+							last_modified.append(os.path.getmtime(os.path.join(path, file)))
+					#model_results_last_modified = max(os.path.getmtime(inspect.getfile(f)) for f in os.walk(testing_dir))
+					model_results_last_modified = datetime.fromtimestamp(max(last_modified))
 					task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir
 					
 					if loc_hist[task_id] != model_results_last_modified:
@@ -125,7 +129,7 @@ def mainOLD():
 					# print("model_name:\t",model_name)
 					# print("interpreter_name:\t",interpreter_name)
 					# print("dataset_dir:\t",dataset_dir)
-					
+					pass
 
 if __name__ == "__main__":
 	import traceback

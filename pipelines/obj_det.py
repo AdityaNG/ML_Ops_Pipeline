@@ -22,6 +22,7 @@ from constants import *
 class KITTI_lemenko_interp(pipeline_dataset_interpreter):
 
 	def load_calibration(self, calib_file_name):
+		print(calib)
 		calib = {}
 		f = open(calib_file_name, "r")
 		for line in f:
@@ -238,6 +239,7 @@ class obj_det_data_visualizer(pipeline_data_visualizer):
 class obj_det_evaluator:
 
 	def evaluate(self, x, y, plot=False):
+		print("Hello3")
 		preds = self.predict(x)
 		image_names_list = y["name"].unique()
 		iou_list = []
@@ -333,6 +335,7 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 
 class obj_det_pipeline_model_yolov5n(obj_det_pipeline_model):
 	def load(self):
+		print("Hello2")
 		self.model = torch.hub.load('ultralytics/yolov5', 'yolov5n')
 		
 class obj_det_pipeline_model_yolov5s(obj_det_pipeline_model):

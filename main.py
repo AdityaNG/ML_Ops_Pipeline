@@ -18,7 +18,8 @@ try:
 	process_list = [
 		'model_analysis', 'ensemble_analysis', 
 		'model_training', 'ensemble_training',
-		'model_visualizer_loop', 'ensemble_visualizer_loop'
+		'model_visualizer_loop', 
+		#'ensemble_visualizer_loop'
 	]
 	processes = {}
 
@@ -75,7 +76,7 @@ try:
 				pass
 except Exception as ex:
 	print("Critical error")
-	#traceback.print_exc()
+	traceback.print_exc()
 finally:
 	while not all_finished(processes):
 		try:

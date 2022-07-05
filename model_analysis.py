@@ -12,6 +12,7 @@ from datetime import datetime
 import json
 
 from all_pipelines import get_all_inputs
+from pipeline_input import source_hash
 from constants import DATASET_DIR, MODEL_TESTING
 from history import local_history
 
@@ -32,7 +33,8 @@ def main():
 				for model_name in model_classes:
 					
 					model_file_path = inspect.getfile(model_classes[model_name])
-					model_last_modified = datetime.fromtimestamp(os.path.getmtime(model_file_path))
+					#model_last_modified = str(datetime.fromtimestamp(os.path.getmtime(model_file_path)))
+					model_last_modified = str(source_hash(model_classes[model_name]))
 					task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir
 					
 					if loc_hist[task_id] != model_last_modified:

@@ -1,8 +1,38 @@
 import numpy as np
+import inspect
+import hashlib
+
 import tensorflow as tf
 
 
-class pipeline_dataset_interpreter:
+def source_hash(self) -> int:
+	if self == object:
+		return 0
+	elif type(self) == type:
+		type_class = self
+
+		type_source = inspect.getsource(type_class)
+		for super_class in type_class.__mro__:
+			if super_class!=type_class:
+				print(type_class, "\t->\t", super_class)
+				type_source += str(super_class) + ":" + str(source_hash(super_class)) + "\n"
+		return int(hashlib.sha1(type_source.encode("utf-8")).hexdigest(), 16) 
+	else:
+		type_class = type(self)
+		
+		type_source = inspect.getsource(type_class)
+		for super_class in type_class.__mro__:
+			print(type_class, "\t->\t", super_class)
+			type_source += str(super_class) + ":" + str(source_hash(super_class)) + "\n"
+		return int(hashlib.sha1(type_source.encode("utf-8")).hexdigest(), 16) 
+		
+
+class pipeline_classes:
+
+	def __hash__(self) -> int:
+		return source_hash(self)
+
+class pipeline_dataset_interpreter(pipeline_classes):
 	# TODO: Impractical to have entire dataset to be loaded into memory
 	# look into alterative architectures which load things into memory chunk by chunk
 	dataset = {
@@ -29,7 +59,7 @@ class pipeline_dataset_interpreter:
 		pass
 
 
-class pipeline_model:
+class pipeline_model(pipeline_classes):
 	model = None
 
 	def __init__(self, load=True) -> None:
@@ -56,7 +86,7 @@ class pipeline_model:
 		pass
 
 
-class pipeline_ensembler:
+class pipeline_ensembler(pipeline_classes):
 
 	def predict(self, x: np.array) -> np.array:
 		# Given a list of lists of predictions from multiple learners
@@ -72,7 +102,7 @@ class pipeline_ensembler:
 	def train(self, x, y) -> np.array:
 		pass
 
-class pipeline_data_visualizer:
+class pipeline_data_visualizer(pipeline_classes):
 
 	def visualize(self, dataset_x, dataset_y, results, directory) -> None:
 		# Visualize the data
@@ -80,7 +110,7 @@ class pipeline_data_visualizer:
 		pass
 
 
-class pipeline_input:
+class pipeline_input(pipeline_classes):
 	__pipeline_name = {}
 	__pipeline_dataset_interpreter = {}
 	__pipeline_model = {}
