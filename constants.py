@@ -10,14 +10,24 @@ LOG_DIR = "logs/"
 MODEL_BASE = "data/{pipeline_name}/models/"
 MODEL_TRAINING = "data/{pipeline_name}/models/{model_name}/training/{interpreter_name}"
 MODEL_TESTING = "data/{pipeline_name}/models/{model_name}/testing/{interpreter_name}"
-MODEL_VISUAL = "data/{pipeline_name}/models/{model_name}/visual/{interpreter_name}"
+MODEL_VISUAL = "data/{pipeline_name}/visuals/{interpreter_name}/{model_name}/{visualizer_name}/" 
 
 ENSEMBLE_BASE = "data/{pipeline_name}/ensemblers/"
 ENSEMBLE_TRAINING = "data/{pipeline_name}/ensemblers/{ensembler_name}/training/{interpreter_name}"
 ENSEMBLE_TESTING = "data/{pipeline_name}/ensemblers/{ensembler_name}/testing/{interpreter_name}"
-ENSEMBLE_VISUAL = "data/{pipeline_name}/ensemblers/{ensembler_name}/visual/{interpreter_name}"
+ENSEMBLE_VISUAL = "data/{pipeline_name}/visuals/{visualizer_name}/ensemblers/{ensembler_name}/interpreter/{interpreter_name}"
 
 HISTORY_PATH = "history/"
+
+def folder_last_modified(folder):
+	last_modified = []
+	for path, directories, files in os.walk(folder):
+		for file in files:
+			last_modified.append(os.path.getmtime(os.path.join(path, file)))
+	#model_results_last_modified = max(os.path.getmtime(inspect.getfile(f)) for f in os.walk(testing_dir))
+	if len(last_modified):
+		return max(last_modified)
+	return 0
 
 def generate_tree():
 	from all_pipelines import get_all_inputs

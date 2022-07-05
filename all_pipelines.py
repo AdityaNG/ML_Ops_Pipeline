@@ -3,7 +3,7 @@ import os
 import importlib
 import traceback
 
-log = True
+log = False
 if __name__=="__main__":
     log = True
 

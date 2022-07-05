@@ -188,7 +188,10 @@ class obj_det_interp_1(pipeline_dataset_interpreter):
 									information['ymax']+=[ymax]
 		return pd.DataFrame(information)
 
-class obj_det_data_visualizer(pipeline_data_visualizer):
+
+class iou_viz(pipeline_data_visualizer):
+	def __init__(self) -> None:
+		super().__init__()
 
 	def visualize(self, x, y, preds, save_dir) -> None:
 		plot = True
@@ -226,20 +229,50 @@ class obj_det_data_visualizer(pipeline_data_visualizer):
 				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (255,255,0),2)
 			for index2, lab in detections.iterrows():
 				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (0,255,0),2)
-				# print(len(labels), len(detections))
-				# print(labels)
-				# print(detections)
+				
 			save_path = os.path.join(save_dir, str(datetime.datetime.now()).replace(" ", "_") + ".png")
-			#cv2.imshow("img", img)
-			#cv2.waitKey(0)
-			#time.sleep(0.5)
-			if min(iou_list)<0.5:
+			
+			if self.iou_compare(iou_list, self.iou_threshold):
 				cv2.imwrite(save_path, img)
+
+class iou_over_x_percent(iou_viz):
+	def __init__(self) -> None:
+		super().__init__()
+		def iou_compare(iou_list, iou_threshold):
+			return min(iou_list)>iou_threshold
+		self.iou_compare = iou_compare
+
+class iou_over_50_percent(iou_over_x_percent):
+	def __init__(self) -> None:
+		super().__init__()
+		self.iou_threshold = 0.5
+
+class iou_over_90_percent(iou_over_x_percent):
+	def __init__(self) -> None:
+		super().__init__()
+		self.iou_threshold = 0.9
+
+class iou_sub_x_percent(iou_viz):
+	def __init__(self) -> None:
+		super().__init__()
+		def iou_compare(iou_list, iou_threshold):
+			return min(iou_list)<iou_threshold
+		self.iou_compare = iou_compare
+	
+class iou_sub_50_percent(iou_sub_x_percent):
+	def __init__(self) -> None:
+		super().__init__()
+		self.iou_threshold = 0.5
+
+class iou_sub_10_percent(iou_sub_x_percent):
+	def __init__(self) -> None:
+		super().__init__()
+		self.iou_threshold = 0.1
+
 
 class obj_det_evaluator:
 
 	def evaluate(self, x, y, plot=False):
-		print("Hello3")
 		preds = self.predict(x)
 		image_names_list = y["name"].unique()
 		iou_list = []
@@ -408,15 +441,18 @@ obj_det_input = pipeline_input("obj_det",
 	p_model={
 		'obj_det_pipeline_model_yolov5n': obj_det_pipeline_model_yolov5n,
 		# 'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
-		# 'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
+		'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
 		# 'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
-		# 'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
+		'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
 	}, 
 	p_ensembler={
 		'obj_det_pipeline_ensembler_1': obj_det_pipeline_ensembler_1
 	}, 
 	p_vizualizer={
-		'obj_det_data_visualizer': obj_det_data_visualizer
+		'iou_over_50_percent': iou_over_50_percent,
+		'iou_over_90_percent': iou_over_90_percent,
+		'iou_sub_50_percent': iou_sub_50_percent,
+		'iou_sub_10_percent': iou_sub_10_percent
 	})
 
 #from depth_perception_demo import depth_input

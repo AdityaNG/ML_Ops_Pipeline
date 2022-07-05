@@ -14,7 +14,7 @@ def source_hash(self) -> int:
 		type_source = inspect.getsource(type_class)
 		for super_class in type_class.__mro__:
 			if super_class!=type_class:
-				print(type_class, "\t->\t", super_class)
+				#print(type_class, "\t->\t", super_class)
 				type_source += str(super_class) + ":" + str(source_hash(super_class)) + "\n"
 		return int(hashlib.sha1(type_source.encode("utf-8")).hexdigest(), 16) 
 	else:
@@ -22,7 +22,7 @@ def source_hash(self) -> int:
 		
 		type_source = inspect.getsource(type_class)
 		for super_class in type_class.__mro__:
-			print(type_class, "\t->\t", super_class)
+			#print(type_class, "\t->\t", super_class)
 			type_source += str(super_class) + ":" + str(source_hash(super_class)) + "\n"
 		return int(hashlib.sha1(type_source.encode("utf-8")).hexdigest(), 16) 
 		
