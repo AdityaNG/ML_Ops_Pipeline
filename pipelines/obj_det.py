@@ -68,7 +68,7 @@ class KITTI_lemenko_interp(pipeline_dataset_interpreter):
 			files_list = list(map(lambda x: x.split("/")[-1].split(".png")[:-1][0], image_2_files_list))
 			#print(files_list)
 			print("KITTI_lemenko_interp: load", mode)
-			for f in tqdm(files_list):
+			for f in tqdm(files_list, file=sys.__stdout__):
 				calib_path = os.path.join(data_object_calib, mode, "calib", f+".txt")
 				image_2_path = os.path.join(data_object_image_2, mode, "image_2", f+".png")
 				image_3_path = os.path.join(data_object_image_3, mode, "image_3", f+".png")
@@ -193,7 +193,7 @@ class iou_viz(pipeline_data_visualizer):
 	def __init__(self) -> None:
 		super().__init__()
 
-	def visualize(self, x, y, preds, save_dir) -> None:
+	def visualize(self, x, y, results, preds, save_dir) -> None:
 		plot = True
 		image_names_list = y["name"].unique()
 		iou_list = []
@@ -204,7 +204,7 @@ class iou_viz(pipeline_data_visualizer):
 			'fn':0		# iou==0	
 		}
 		print("obj_det_data_visualizer: visualize")
-		for image_name in tqdm(image_names_list):
+		for image_name in tqdm(image_names_list, file=sys.__stdout__):
 			iou_list = []
 			labels = y[y["name"]==image_name]
 			detections = preds[preds["name"]==image_name]
@@ -229,7 +229,29 @@ class iou_viz(pipeline_data_visualizer):
 				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (255,255,0),2)
 			for index2, lab in detections.iterrows():
 				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (0,255,0),2)
-				
+			
+			min_iou = min(iou_list)
+			max_iou = max(iou_list)
+			avg_iou = sum(iou_list) / len(iou_list)
+			
+			img = cv2.putText(img, 'min_iou='+str(round(min_iou,4)), (25,25), 
+				cv2.FONT_HERSHEY_SIMPLEX, 
+                0.5, 
+				(255, 0, 0), 
+				1, cv2.LINE_AA)
+
+			img = cv2.putText(img, 'max_iou='+str(round(max_iou,4)), (25,45), 
+				cv2.FONT_HERSHEY_SIMPLEX, 
+                0.5, 
+				(255, 0, 0), 
+				1, cv2.LINE_AA)
+
+			img = cv2.putText(img, 'avg_iou='+str(round(avg_iou,4)), (25,65), 
+				cv2.FONT_HERSHEY_SIMPLEX, 
+                0.5, 
+				(255, 0, 0), 
+				1, cv2.LINE_AA)
+
 			save_path = os.path.join(save_dir, str(datetime.datetime.now()).replace(" ", "_") + ".png")
 			
 			if self.iou_compare(iou_list, self.iou_threshold):
@@ -283,7 +305,7 @@ class obj_det_evaluator:
 			'fn':0		# iou==0	
 		}
 		print("obj_det_evaluator")
-		for image_name in tqdm(image_names_list):
+		for image_name in tqdm(image_names_list, file=sys.__stdout__):
 			labels = y[y["name"]==image_name]
 			detections = preds[preds["name"]==image_name]
 			for index1, lab in labels.iterrows():
@@ -336,7 +358,7 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 		image_names_list = y["name"].unique()
 		
 		results = {
-			'training_results': 0,
+			'training_results': 1,
 		}
 		return results, preds
 
@@ -348,7 +370,7 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
 		}
 		print("obj_det_pipeline_model: predict")
-		for image_path in tqdm(x):
+		for image_path in tqdm(x, file=sys.__stdout__):
 			img = cv2.imread(image_path)
 			results = self.model(image_path)
 			df = results.pandas().xyxyn[0]
@@ -368,7 +390,6 @@ class obj_det_pipeline_model(obj_det_evaluator, pipeline_model):
 
 class obj_det_pipeline_model_yolov5n(obj_det_pipeline_model):
 	def load(self):
-		print("Hello2")
 		self.model = torch.hub.load('ultralytics/yolov5', 'yolov5n')
 		
 class obj_det_pipeline_model_yolov5s(obj_det_pipeline_model):
@@ -443,7 +464,7 @@ obj_det_input = pipeline_input("obj_det",
 		# 'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
 		'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
 		# 'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
-		'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
+		# 'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
 	}, 
 	p_ensembler={
 		'obj_det_pipeline_ensembler_1': obj_det_pipeline_ensembler_1

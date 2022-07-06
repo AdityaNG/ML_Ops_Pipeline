@@ -16,10 +16,12 @@ def all_finished(processes):
 
 try:
 	process_list = [
-		'model_analysis', 'ensemble_analysis', 
-		'model_training', 'ensemble_training',
+		'model_training', 
+		'model_analysis', 
 		'model_visualizer_loop', 
-		#'ensemble_visualizer_loop'
+		# 'ensemble_training',
+		# 'ensemble_analysis', 
+		# 'ensemble_visualizer_loop'
 	]
 	processes = {}
 
@@ -29,7 +31,7 @@ try:
 		process_py = process + '.py'
 		assert os.path.exists(process_py)
 		print("Starting ", process)
-		processes[process] = subprocess.Popen(['/usr/bin/python3', process_py], stdout=stdout_process, stderr=stderr_process)
+		processes[process] = subprocess.Popen(['/usr/bin/python', process_py], stdout=stdout_process, stderr=stderr_process)
 
 	# browsepy 0.0.0.0 8080 --directory data
 	process = 'browsepy'

@@ -12,9 +12,8 @@ from datetime import datetime
 import json
 
 from all_pipelines import get_all_inputs
-from constants import DATASET_DIR, MODEL_TRAINING, MODEL_TRAINING
-
-
+from pipeline_input import source_hash
+from constants import DATASET_DIR, MODEL_TRAINING
 from history import local_history
 
 def main():
@@ -34,7 +33,8 @@ def main():
 				for model_name in model_classes:
 					
 					model_file_path = inspect.getfile(model_classes[model_name])
-					model_last_modified = datetime.fromtimestamp(os.path.getmtime(model_file_path))
+					#model_last_modified = str(datetime.fromtimestamp(os.path.getmtime(model_file_path)))
+					model_last_modified = str(source_hash(model_classes[model_name]))
 					task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir
 					
 					if loc_hist[task_id] != model_last_modified:
@@ -73,12 +73,13 @@ def main():
 						model_name=model_name
 					)
 					os.makedirs(training_dir, exist_ok=True)
-					mod = model_classes[model_name]()
-					#mod.predict(dat['test'])
-					results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
+					mod = model_classes[model_name](training_dir)
+					#mod.predict(dat['train'])
+					results, predictions = mod.train(dat['train']['x'], dat['train']['y'])
 					#print(results)
 					results_pkl = os.path.join(training_dir, "results.pkl")
 					predictions_pkl = os.path.join(training_dir, "predictions.pkl")
+					model_pkl = os.path.join(training_dir, "model.pkl")
 
 					results_handle = open(results_pkl, 'wb')
 					pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -87,45 +88,13 @@ def main():
 					predictions_handle = open(predictions_pkl, 'wb')
 					pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
 					predictions_handle.close()
-					
+
+					model_handle = open(model_pkl, 'wb')
+					pickle.dump(mod, model_handle, protocol=pickle.HIGHEST_PROTOCOL)
+					model_handle.close()
+
 					task_id, model_last_modified = task_list[pipeline_name][interpreter_name][dataset_dir][model_name]
 					loc_hist[task_id] = model_last_modified
-
-def mainOLD():
-	for pipeline_name in all_inputs:
-		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
-		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
-		for interpreter_name in interpreters:
-			interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
-			interpreter_datasets = glob.glob(os.path.join(interpreter_dataset_dir,"*"))
-			for dataset_dir in interpreter_datasets:
-				dat = interpreters[interpreter_name](dataset_dir).get_dataset()
-				model_classes = all_inputs[pipeline_name].get_pipeline_model()
-				for model_name in model_classes:
-					print("-"*10)
-					print("model_name:\t",model_name)
-					print("interpreter_name:\t",interpreter_name)
-					print("dataset_dir:\t",dataset_dir)
-					training_dir = MODEL_TRAINING.format(
-						pipeline_name=pipeline_name,
-						interpreter_name=interpreter_name,
-						model_name=model_name
-					)
-					os.makedirs(training_dir, exist_ok=True)
-					mod = model_classes[model_name]()
-					#mod.predict(dat['test'])
-					train_results, train_predictions = mod.train(dat['train']['x'], dat['train']['y'])
-					#print(results)
-					results_pkl = os.path.join(training_dir, "results.pkl")
-					predictions_pkl = os.path.join(training_dir, "predictions.pkl")
-
-					results_handle = open(results_pkl, 'wb')
-					pickle.dump(train_results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
-					results_handle.close()
-
-					predictions_handle = open(predictions_pkl, 'wb')
-					pickle.dump(train_predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
-					predictions_handle.close()
 
 if __name__ == "__main__":
 	import traceback

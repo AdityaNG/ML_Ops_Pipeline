@@ -62,7 +62,8 @@ class pipeline_dataset_interpreter(pipeline_classes):
 class pipeline_model(pipeline_classes):
 	model = None
 
-	def __init__(self, load=True) -> None:
+	def __init__(self, training_dir, load=True) -> None:
+		self.training_dir = training_dir
 		if load:
 			self.load()
 

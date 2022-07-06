@@ -8,12 +8,13 @@ import os
 import time
 import inspect
 from datetime import datetime
+import sys
 
 import json
 
 from all_pipelines import get_all_inputs
 from pipeline_input import source_hash
-from constants import DATASET_DIR, MODEL_TESTING
+from constants import DATASET_DIR, MODEL_TESTING, MODEL_TRAINING, folder_last_modified
 from history import local_history
 
 def main():
@@ -31,10 +32,19 @@ def main():
 				
 				model_classes = all_inputs[pipeline_name].get_pipeline_model()
 				for model_name in model_classes:
+					training_dir = MODEL_TRAINING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						model_name=model_name
+					)
+					os.makedirs(training_dir, exist_ok=True)
+					#model_pkl = os.path.join(training_dir, "model.pkl")
 					
-					model_file_path = inspect.getfile(model_classes[model_name])
-					#model_last_modified = str(datetime.fromtimestamp(os.path.getmtime(model_file_path)))
-					model_last_modified = str(source_hash(model_classes[model_name]))
+					if os.path.exists(training_dir):
+						model_last_modified = str(datetime.fromtimestamp(folder_last_modified(training_dir)))
+					else:
+						model_last_modified = str(datetime.fromtimestamp(0))
+					#model_last_modified = str(source_hash(model_classes[model_name]))
 					task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir
 					
 					if loc_hist[task_id] != model_last_modified:
@@ -73,7 +83,14 @@ def main():
 						model_name=model_name
 					)
 					os.makedirs(testing_dir, exist_ok=True)
-					mod = model_classes[model_name]()
+					training_dir = MODEL_TRAINING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						model_name=model_name
+					)
+					os.makedirs(training_dir, exist_ok=True)
+
+					mod = model_classes[model_name](training_dir)
 					#mod.predict(dat['test'])
 					results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
 					#print(results)

@@ -116,7 +116,7 @@ def main():
 						print("dataset_dir:\t",dataset_dir)
 						print("visual_dir:\t",visual_dir)
 
-						visualizers[visualizer_name]().visualize(dat['test']['x'], dat['test']['y'], predictions, visual_dir)
+						visualizers[visualizer_name]().visualize(dat['test']['x'], dat['test']['y'], results, predictions, visual_dir)
 
 						visual_dir_last_modified = str(datetime.fromtimestamp(folder_last_modified(visual_dir)))
 						task_id, task_last_modified, visual_dir_last_modified_old = task_list[pipeline_name][interpreter_name][dataset_dir][model_name][visualizer_name]

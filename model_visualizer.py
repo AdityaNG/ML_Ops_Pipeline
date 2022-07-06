@@ -85,7 +85,7 @@ def vizualize_model(p_input: pipeline_input, interpreter_name: str, dataset_name
 	#print(results)
 	#print(predictions)
 
-	visualizer.visualize(dat['test']['x'], dat['test']['y'], predictions, visual_dir)
+	visualizer.visualize(dat['test']['x'], dat['test']['y'], results, predictions, visual_dir)
 
 
 
