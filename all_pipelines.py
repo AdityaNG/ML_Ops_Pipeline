@@ -34,7 +34,7 @@ def get_all_inputs():
 						print("Loading:", p_name)
 				
 				p_exported = pipeline.exported_pipeline
-				print("pipeline_hash(",p_name,")=",hash(p_exported))
+				#print("pipeline_hash(",p_name,")=",hash(p_exported))
 				#all_inputs[p_exported.get_pipeline_name()] = p_exported
 				all_inputs[p_name] = p_exported
 				all_inputs_modules[p_name] = pipeline

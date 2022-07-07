@@ -105,7 +105,7 @@ class pipeline_ensembler(pipeline_classes):
 
 class pipeline_data_visualizer(pipeline_classes):
 
-	def visualize(self, dataset_x, dataset_y, results, directory) -> None:
+	def visualize(self, dataset_x, dataset_y, results, predictions, directory) -> None:
 		# Visualize the data
 		# TODO Save data to the given directory
 		pass

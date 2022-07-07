@@ -10,6 +10,7 @@ import inspect
 from datetime import datetime
 
 import json
+from typing import final
 
 from all_pipelines import get_all_inputs
 from pipeline_input import source_hash
@@ -58,8 +59,7 @@ def main():
 							task_list[pipeline_name][interpreter_name][dataset_dir][model_name].setdefault(visualizer_name, (task_id, task_last_modified, visual_dir_last_modified))
 
 	if task_list == {}:
-		print("Waiting for new tasks...")
-		time.sleep(5)
+		#print("Waiting for new tasks...")
 		return
 
 	print("-"*10)
@@ -116,11 +116,15 @@ def main():
 						print("dataset_dir:\t",dataset_dir)
 						print("visual_dir:\t",visual_dir)
 
-						visualizers[visualizer_name]().visualize(dat['test']['x'], dat['test']['y'], results, predictions, visual_dir)
-
-						visual_dir_last_modified = str(datetime.fromtimestamp(folder_last_modified(visual_dir)))
-						task_id, task_last_modified, visual_dir_last_modified_old = task_list[pipeline_name][interpreter_name][dataset_dir][model_name][visualizer_name]
-						loc_hist[task_id] = task_last_modified + visual_dir_last_modified
+						try:
+							visualizers[visualizer_name]().visualize(dat['test']['x'], dat['test']['y'], results, predictions, visual_dir)
+						except Exception as ex:
+							print(ex)
+							traceback.print_exc()
+						finally:
+							visual_dir_last_modified = str(datetime.fromtimestamp(folder_last_modified(visual_dir)))
+							task_id, task_last_modified, visual_dir_last_modified_old = task_list[pipeline_name][interpreter_name][dataset_dir][model_name][visualizer_name]
+							loc_hist[task_id] = task_last_modified + visual_dir_last_modified
 
 
 if __name__ == "__main__":
@@ -138,6 +142,7 @@ if __name__ == "__main__":
 	while True:
 		try:
 			main()
+			time.sleep(5)
 		except Exception as e:
 			traceback.print_exc()
 			print("Exception: {}".format(e))

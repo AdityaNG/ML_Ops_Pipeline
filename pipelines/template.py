@@ -46,7 +46,7 @@ class template_pipeline_model(template_evaluator, pipeline_model):
 		# TODO: Load the model
 		self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
 		
-	def train(self, x, y) -> np.array:
+	def train(self, x, y):
 		preds = self.predict(x)
 		# TODO: Train the model		
 		results = {

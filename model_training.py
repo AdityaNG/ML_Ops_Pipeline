@@ -44,8 +44,7 @@ def main():
 						task_list[pipeline_name][interpreter_name][dataset_dir].setdefault(model_name, (task_id, model_last_modified))
 
 	if task_list == {}:
-		print("Waiting for new tasks...")
-		time.sleep(5)
+		#print("Waiting for new tasks...")
 		return
 
 	print("-"*10)
@@ -73,28 +72,33 @@ def main():
 						model_name=model_name
 					)
 					os.makedirs(training_dir, exist_ok=True)
-					mod = model_classes[model_name](training_dir)
-					#mod.predict(dat['train'])
-					results, predictions = mod.train(dat['train']['x'], dat['train']['y'])
-					#print(results)
-					results_pkl = os.path.join(training_dir, "results.pkl")
-					predictions_pkl = os.path.join(training_dir, "predictions.pkl")
-					model_pkl = os.path.join(training_dir, "model.pkl")
 
-					results_handle = open(results_pkl, 'wb')
-					pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
-					results_handle.close()
+					try:
+						mod = model_classes[model_name](training_dir)
+						#mod.predict(dat['train'])
+						results, predictions = mod.train(dat['train']['x'], dat['train']['y'])
+						#print(results)
+						results_pkl = os.path.join(training_dir, "results.pkl")
+						predictions_pkl = os.path.join(training_dir, "predictions.pkl")
+						model_pkl = os.path.join(training_dir, "model.pkl")
 
-					predictions_handle = open(predictions_pkl, 'wb')
-					pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
-					predictions_handle.close()
+						results_handle = open(results_pkl, 'wb')
+						pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+						results_handle.close()
 
-					model_handle = open(model_pkl, 'wb')
-					pickle.dump(mod, model_handle, protocol=pickle.HIGHEST_PROTOCOL)
-					model_handle.close()
+						predictions_handle = open(predictions_pkl, 'wb')
+						pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+						predictions_handle.close()
 
-					task_id, model_last_modified = task_list[pipeline_name][interpreter_name][dataset_dir][model_name]
-					loc_hist[task_id] = model_last_modified
+						model_handle = open(model_pkl, 'wb')
+						pickle.dump(mod, model_handle, protocol=pickle.HIGHEST_PROTOCOL)
+						model_handle.close()
+					except Exception as ex:
+						print(ex)
+						traceback.print_exc()
+					finally:
+						task_id, model_last_modified = task_list[pipeline_name][interpreter_name][dataset_dir][model_name]
+						loc_hist[task_id] = model_last_modified
 
 if __name__ == "__main__":
 	import traceback
@@ -111,6 +115,7 @@ if __name__ == "__main__":
 	while True:
 		try:
 			main()
+			time.sleep(5)
 		except Exception as e:
 			traceback.print_exc()
 			print("Exception: {}".format(e))
