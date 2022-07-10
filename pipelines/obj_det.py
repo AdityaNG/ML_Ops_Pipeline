@@ -188,6 +188,75 @@ class obj_det_interp_1(pipeline_dataset_interpreter):
 									information['ymax']+=[ymax]
 		return pd.DataFrame(information)
 
+class streamlit_viz(pipeline_streamlit_visualizer):
+
+	def visualize_new(self):
+		self.load_data()
+		st.markdown("# Visuals")
+		preds = self.testing_predictions
+		y = self.dat['test']['y']
+		image_names_list = y["name"].unique()
+		iou_list = []
+		iou_thresh = 0.5
+		yolo_metrics = {
+			'tp':0, 	# iou>thresh
+			'fp': 0, 	# 0<iou<thresh
+			'fn':0		# iou==0	
+		}
+		print("obj_det_data_visualizer: visualize")
+		for image_name in tqdm(image_names_list, file=sys.__stdout__):
+			iou_list = []
+			labels = y[y["name"]==image_name]
+			detections = preds[preds["name"]==image_name]
+			for index1, lab in labels.iterrows():
+				largest_iou = 0.0
+				for index2, yolo_bb in detections.iterrows():
+					iou = get_iou(lab, yolo_bb)
+					if iou > largest_iou:
+						largest_iou = iou
+				if largest_iou==0:
+					yolo_metrics['fn'] += 1
+				else:
+					if largest_iou>iou_thresh:
+						yolo_metrics['tp'] += 1
+					else:
+						yolo_metrics['fp'] += 1
+				iou_list.append(largest_iou)
+
+			image_path = labels["image"].iloc[0]
+			img = cv2.imread(image_path)
+			for index1, lab in labels.iterrows():
+				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (255,255,0),2)
+			for index2, lab in detections.iterrows():
+				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (0,255,0),2)
+			
+			min_iou = min(iou_list)
+			max_iou = max(iou_list)
+			avg_iou = sum(iou_list) / len(iou_list)
+			
+			img = cv2.putText(img, 'min_iou='+str(round(min_iou,4)), (25,25), 
+				cv2.FONT_HERSHEY_SIMPLEX, 
+                0.5, 
+				(255, 0, 0), 
+				1, cv2.LINE_AA)
+
+			img = cv2.putText(img, 'max_iou='+str(round(max_iou,4)), (25,45), 
+				cv2.FONT_HERSHEY_SIMPLEX, 
+                0.5, 
+				(255, 0, 0), 
+				1, cv2.LINE_AA)
+
+			img = cv2.putText(img, 'avg_iou='+str(round(avg_iou,4)), (25,65), 
+				cv2.FONT_HERSHEY_SIMPLEX, 
+                0.5, 
+				(255, 0, 0), 
+				1, cv2.LINE_AA)
+
+			#save_path = os.path.join(save_dir, str(datetime.datetime.now()).replace(" ", "_") + ".png")
+			
+			#if self.iou_compare(iou_list, self.iou_threshold):
+				#cv2.imwrite(save_path, img)
+
 
 class iou_viz(pipeline_data_visualizer):
 	def __init__(self) -> None:
@@ -474,7 +543,8 @@ obj_det_input = pipeline_input("obj_det",
 		'iou_over_90_percent': iou_over_90_percent,
 		'iou_sub_50_percent': iou_sub_50_percent,
 		'iou_sub_10_percent': iou_sub_10_percent
-	})
+	},
+	p_pipeline_streamlit_visualizer=streamlit_viz)
 
 #from depth_perception_demo import depth_input
 exported_pipeline = obj_det_input
