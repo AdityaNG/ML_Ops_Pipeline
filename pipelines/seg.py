@@ -341,6 +341,7 @@ class iou_vis(seg_data_visualizer):
 class video_vis(seg_data_visualizer):
 	def visualize(self, x, y, results, preds, save_dir) -> None:
 		writer = None
+		print(save_dir)
 		for index, row in tqdm(preds.iterrows(), total=preds.shape[0]):
 		# 	# TODO produce model predictions
 			# img = cv2.imread(row['image_2'])
@@ -366,12 +367,12 @@ class video_vis(seg_data_visualizer):
 				alpha=0.5,
 			)
 			# img.shape (270, 480, 3)
-			semantic_rgb = cv2.resize(semantic_rgb, (480, 270)) 
+			semantic_rgb = cv2.resize(semantic_rgb, (img.shape[1], img.shape[0])) 
 
-			print("semantic_rgb.dtype", semantic_rgb.dtype)
-			print("img.dtype", img.dtype)
-			print("semantic_rgb.shape", semantic_rgb.shape)
-			print("img.shape", img.shape)
+			# print("semantic_rgb.dtype", semantic_rgb.dtype)
+			# print("img.dtype", img.dtype)
+			# print("semantic_rgb.shape", semantic_rgb.shape)
+			# print("img.shape", img.shape)
 			
 			vis_output_img = cv2.vconcat([vis_output_img, semantic_rgb])
 			# cv2.imshow('vis_output_img', vis_output_img)
@@ -386,6 +387,7 @@ class video_vis(seg_data_visualizer):
 				#writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 10, (size[1],size[0]))
 				writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'avc1'), 5, (size[1],size[0]))
 			writer.write(vis_output_img)
+			# print(output_path)
 			#cv2.imwrite(save_path, vis_output_img)
 
 
