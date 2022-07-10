@@ -94,6 +94,11 @@ Install this specific version of `browsepy`
 python -m pip install git+https://github.com/AdityaNG/browsepy.git@galary_support
 ```
 
+Run streamlit web UI
+```bash
+streamlit run web_ui.p
+```
+
 # Code Quality
 Static Code Analysis
 ```bash
