@@ -13,7 +13,7 @@ from PIL import Image
 import sys
 sys.path.append('../')
 
-from pipeline_input import pipeline_data_visualizer, pipeline_dataset_interpreter, pipeline_ensembler, pipeline_model, pipeline_input
+from pipeline_input import pipeline_data_visualizer, pipeline_dataset_interpreter, pipeline_ensembler, pipeline_model, pipeline_input, pipeline_streamlit_visualizer
 from constants import *
 
 # Some basic setup:
@@ -66,7 +66,7 @@ class seg_kitti(pipeline_dataset_interpreter):
 			if mode=='training':
 				dataset[mode] = {
 					# 'image_2': [], 'instance': [], 'semantic': [], 'semantic_rgb': []
-					'image_2': [], 'semantic_rgb': []
+					'image_2': [], 'semantic_rgb': [], #'gt_mask': []
 				}
 			else:
 				dataset[mode] = {
@@ -90,9 +90,21 @@ class seg_kitti(pipeline_dataset_interpreter):
 				
 				dataset[mode]['image_2'] += [image_2_path]
 				if mode=='training':
+					# Mapping: https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py
 					#dataset[mode]['instance'] += [instance_path]
 					#dataset[mode]['semantic'] += [semantic_path]
+					# img = cv2.imread(image_2_path)
+					# mask_car = (img == (142, 0, 0)).all(-1)
+					# mask_truck = (img == (70, 0, 0)).all(-1)
+					# mask_bus = (img == (100, 60, 0)).all(-1)
+					# mask_caravan = (img == (90, 0, 0)).all(-1)
+					# mask_trailer = (img == (110, 0, 0)).all(-1)
+					# mask_truck = (img == (230, 0, 0)).all(-1)
+
+					# mask = mask_car + mask_truck + mask_bus + mask_caravan + mask_trailer + mask_truck
+
 					dataset[mode]['semantic_rgb'] += [semantic_rgb_path]
+					# dataset[mode]['gt_mask'] += [mask]
 				
 			dataset[mode] = pd.DataFrame(dataset[mode])
 		
@@ -221,7 +233,8 @@ class seg_cfg:
 
 		# add project-specific config (e.g., TensorMask) here if you're not running a model in detectron2's core library
 		# cfg.merge_from_file(model_zoo.get_config_file("/home/aditya/VSProjects/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml"))
-		self.cfg.merge_from_file("/home/aditya/VSProjects/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
+		#self.cfg.merge_from_file("/home/aditya/VSProjects/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
+		self.cfg.merge_from_file("/home/lxd1kor/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
 		
 		self.cfg.merge_from_list([])
 		# Set score_threshold for builtin models
@@ -292,18 +305,12 @@ class seg_data_visualizer(seg_cfg, pipeline_data_visualizer):
 		for index, mask in enumerate(masks):
 			assert mask.shape == img.shape[:2]
 			mask = mask.astype(np.uint8)
-			#color = random_color(seed=hash(labels[index]))
 			label_hash = int(hashlib.sha1(str(labels[index]).encode("utf-8")).hexdigest(), 16) % (2**32)
-			#label_hash = labels[index]
-			#label_hash = int(hashlib.sha1(labels[index]).hexdigest(), 16) 
 			color = random_color(seed=label_hash)
 			masked_color = np.ones_like(img) * 255
 			masked_color[:,:] = color
-			#masked_color = cv2.bitwise_and(output,output, mask=mask)
 			masked_color = cv2.bitwise_or(masked_color, masked_color, mask=mask)
 			
-			#output = cv2.bitwise_and(output,masked_color)
-			#final_masked_color = cv2.addWeighted(final_masked_color, alpha, masked_color, beta, 0.0)
 			final_masked_color = final_masked_color + masked_color
 		output = cv2.addWeighted(output, alpha, final_masked_color, beta, 0.0)
 		return output
@@ -313,6 +320,7 @@ class iou_vis(seg_data_visualizer):
 		for index, row in tqdm(preds.iterrows(), total=preds.shape[0]):
 		# 	# TODO produce model predictions
 			# img = cv2.imread(row['image_2'])
+			#print(row)
 			img = read_image(row['image_2'])
 			semantic_rgb = read_image(y[x['image_2']==row['image_2']]['semantic_rgb'].iloc[0])
 
@@ -342,6 +350,8 @@ class video_vis(seg_data_visualizer):
 	def visualize(self, x, y, results, preds, save_dir) -> None:
 		writer = None
 		print(save_dir)
+
+
 		for index, row in tqdm(preds.iterrows(), total=preds.shape[0]):
 		# 	# TODO produce model predictions
 			# img = cv2.imread(row['image_2'])
@@ -384,12 +394,12 @@ class video_vis(seg_data_visualizer):
 				output_path = os.path.join(save_dir, 'output.mp4')
 				if os.path.exists(output_path):
 					os.remove(output_path)
-				#writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 10, (size[1],size[0]))
-				writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'avc1'), 5, (size[1],size[0]))
+				writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 10, (size[1],size[0]))
+				#writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'avc1'), 5, (size[1],size[0]))
 			writer.write(vis_output_img)
 			# print(output_path)
 			#cv2.imwrite(save_path, vis_output_img)
-
+	
 
 class seg_evaluator:
 
@@ -398,9 +408,71 @@ class seg_evaluator:
 		# TODO: write a common evaluation script that is common to all models
 		# Note: Optionally, you can give model specific implementations for the evaluation logic
 		#		by overloading the evaluate(self, x, y) method in the model class
+		
+		Dice_coeff_list = []
+		iou_list = []
+		iou_thresh = 0.5
+		yolo_metrics = {
+			'tp':0, 	# iou>thresh
+			'fp': 0, 	# 0<iou<thresh
+			'fn':0		# iou==0	
+		}
+
+		dat_test = x.join(y)
+		for index, row in dat_test.iterrows():
+			img = cv2.imread(row['image_2'])
+			semantic_rgb = cv2.imread(row['semantic_rgb'])
+			mask_car = (semantic_rgb == (142, 0, 0)).all(-1)
+			mask_truck = (semantic_rgb == (70, 0, 0)).all(-1)
+			mask_bus = (semantic_rgb == (100, 60, 0)).all(-1)
+			mask_caravan = (semantic_rgb == (90, 0, 0)).all(-1)
+			mask_trailer = (semantic_rgb == (110, 0, 0)).all(-1)
+			mask_motorcycle = (semantic_rgb == (230, 0, 0)).all(-1)
+			mask_bicycle = (semantic_rgb == (32, 11, 119)).all(-1)
+			mask_rider = (semantic_rgb == (0, 0, 255)).all(-1)
+			 
+			gt_mask = mask_car + mask_truck + mask_bus + mask_caravan + mask_trailer + mask_motorcycle + mask_bicycle + mask_rider
+
+			pred_mask = np.full(gt_mask.shape, False, dtype=bool)
+
+			model_pred = preds[preds["image_2"]==row['image_2']]
+			pred_mask_list = model_pred["masks"].iloc[0]
+			pred_classes_list = model_pred["classes"].iloc[0]
+			for ind, msk in enumerate(pred_mask_list):
+				pred_class = pred_classes_list[ind]
+				if pred_class in (2, 3, 5, 7):
+					pred_mask += msk
+			
+			intersection = np.logical_and(gt_mask, pred_mask)
+			union = np.logical_or(gt_mask, pred_mask)
+			IOU = np.sum(intersection) / np.sum(union)
+			Dice_coeff = 2 * np.sum(intersection) / (np.sum(gt_mask) + np.sum(pred_mask))
+			Dice_coeff_list.append(Dice_coeff)
+			iou_list.append(IOU)
+			if IOU==0:
+				yolo_metrics['fn'] += 1
+			else:
+				if IOU>iou_thresh:
+					yolo_metrics['tp'] += 1
+				else:
+					yolo_metrics['fp'] += 1
+
+			# mask_vis = pred_mask.astype(np.uint8) * 255
+			# cv2.imshow('mask', mask_vis)
+			# cv2.waitKey(1)
+
+		prec = np.float64(yolo_metrics['tp']) / float(yolo_metrics['tp'] + yolo_metrics['fp'])
+		recall = np.float64(yolo_metrics['tp']) / float(yolo_metrics['tp'] + yolo_metrics['fn'])
+		f1_score = np.float64(2*prec*recall)/(prec+recall)
+		iou_avg = np.float64(sum(iou_list)) / len(iou_list)
+		Dice_coeff_avg = sum(Dice_coeff_list) / len(Dice_coeff_list)
 		results = {
-			'some_metric': 0,
-			'another_metric': 0
+			'prec': prec,
+			'recall': recall,
+			'f1_score': f1_score,
+			'Dice_coeff_list': Dice_coeff_avg,
+			'iou_avg': iou_avg,
+			'confusion': yolo_metrics
 		}
 		return results, preds
 
@@ -412,11 +484,11 @@ class seg_pipeline_model(seg_cfg, seg_evaluator, pipeline_model):
 		self.predictor = DefaultPredictor(self.cfg)
 		
 	def train(self, x, y) -> np.array:
-		preds = self.predict(x)
+		#preds = self.predict(x)
+
 		# TODO: Train the model		
-		results = {
-			'training_results': 0,
-		}
+		results, preds =self.evaluate(x,y)
+
 		return results, preds
 
 	def predict(self, x) -> np.array:
@@ -434,8 +506,7 @@ class seg_pipeline_model(seg_cfg, seg_evaluator, pipeline_model):
 		# 	# TODO produce model predictions
 			# img = cv2.imread(row['image_2'])
 			img = read_image(row['image_2'])
-			semantic_rgb = read_image(row['semantic_rgb'])
-
+			
 			outputs = self.predictor(img)
 			
 			instances = outputs["instances"].to(self.cpu_device) # detectron2.structures.instances.Instances
@@ -479,14 +550,162 @@ class seg_pipeline_ensembler_1(seg_evaluator, pipeline_ensembler):
 		return predict_results
 
 
-	def train(self, x, y) -> np.array:
-		preds = self.predict(x)
+	def train(self, x, y):
+		#preds = self.predict(x)
 		# TODO: train ensemble model
-		results = {
-			'training_results': 0,
-		}
+		results, preds =self.evaluate(x,y)
+
 		return results, preds
 
+class streamlit_viz(pipeline_streamlit_visualizer):
+
+	def visualize(self):
+		self.load_data()
+
+		self.st.markdown("# Testing Results")
+		self.st.write(self.testing_results)
+		#self.st.write(self.testing_predictions)
+
+		self.st.markdown("# Training Results")
+		self.st.write(self.training_results)
+
+		self.st.markdown("# Visuals")
+		
+		if True:
+			preds = self.training_predictions
+			x = self.dat['train']['x']
+			y = self.dat['train']['y']
+		else:
+			preds = self.testing_predictions
+			x = self.dat['test']['x']
+			y = self.dat['test']['y']
+		
+		iou_list = []
+		iou_thresh = 0.5
+		yolo_metrics = {
+			'tp':0, 	# iou>thresh
+			'fp': 0, 	# 0<iou<thresh
+			'fn':0		# iou==0	
+		}
+
+		iou_thresh_min, iou_thresh_max = self.st.sidebar.slider('IOU Threshold', 0, 100, [0,10])
+		iou_thresh_min, iou_thresh_max = iou_thresh_min/100.0, iou_thresh_max/100.0
+
+		dat_test = x.join(y)
+		for index, row in dat_test.iterrows():
+			img = cv2.imread(row['image_2'])
+			semantic_rgb = cv2.imread(row['semantic_rgb'])
+			mask_car = (semantic_rgb == (142, 0, 0)).all(-1)
+			mask_truck = (semantic_rgb == (70, 0, 0)).all(-1)
+			mask_bus = (semantic_rgb == (100, 60, 0)).all(-1)
+			mask_caravan = (semantic_rgb == (90, 0, 0)).all(-1)
+			mask_trailer = (semantic_rgb == (110, 0, 0)).all(-1)
+			mask_motorcycle = (semantic_rgb == (230, 0, 0)).all(-1)
+			mask_bicycle = (semantic_rgb == (32, 11, 119)).all(-1)
+			mask_rider = (semantic_rgb == (0, 0, 255)).all(-1)
+			mask_train = (semantic_rgb == (100, 80, 0)).all(-1)
+			 
+			gt_mask = mask_car + mask_truck + mask_bus + mask_caravan + mask_trailer + mask_motorcycle + mask_bicycle + mask_rider + mask_train
+
+			pred_mask = np.full(gt_mask.shape, False, dtype=bool)
+
+			model_pred = preds[preds["image_2"]==row['image_2']]
+			pred_mask_list = model_pred["masks"].iloc[0]
+			pred_classes_list = model_pred["classes"].iloc[0]
+			pred_classes_list_final = []
+			print(pred_classes_list)
+			for ind, msk in enumerate(pred_mask_list):
+				pred_class = pred_classes_list[ind]
+				#if pred_class in (3, 4, 6, 8, ):
+				if pred_class in (2, 3, 5, 7, ):
+					#pred_mask += msk
+					pred_mask = np.logical_or(pred_mask, msk)
+					pred_classes_list_final.append(msk)
+			
+			intersection = np.logical_and(gt_mask, pred_mask)
+			union = np.logical_or(gt_mask, pred_mask)
+			IOU = 1.0 * np.sum(intersection) / np.sum(union)
+			Dice_coeff = 2 * np.sum(intersection) / (np.sum(gt_mask) + np.sum(pred_mask))
+			iou_list.append(IOU)
+			if IOU==0:
+				yolo_metrics['fn'] += 1
+			else:
+				if IOU>iou_thresh:
+					yolo_metrics['tp'] += 1
+				else:
+					yolo_metrics['fp'] += 1
+
+			if iou_thresh_min <= IOU and IOU <= iou_thresh_max:
+				img = read_image(row['image_2'])
+				semantic_rgb = read_image(y[x['image_2']==row['image_2']]['semantic_rgb'].iloc[0])
+
+				boxes = model_pred['boxes'].iloc[0]
+				scores = model_pred['scores'].iloc[0]
+				classes = model_pred['classes'].iloc[0]
+				keypoints = model_pred['keypoints'].iloc[0]
+				masks = model_pred['masks'].iloc[0]
+
+				vis_output_img = self.overlay_instances(
+					img,
+					masks=pred_classes_list_final,
+					boxes=boxes,
+					labels=classes,
+					keypoints=keypoints,
+					assigned_colors=None,
+					alpha=0.5,
+				)
+				vis_output_img = self.overlay_instances(
+					vis_output_img,
+					masks=[gt_mask,],
+					boxes=boxes,
+					labels=classes,
+					keypoints=keypoints,
+					assigned_colors=None,
+					alpha=0.5,
+					color=(0,255,0)
+				)
+
+				vis_output_img = cv2.putText(vis_output_img, 'IOU='+str(round(IOU,4)), (25,50), 
+					cv2.FONT_HERSHEY_SIMPLEX, 
+					1, 
+					(255, 0, 0), 
+					1, cv2.LINE_AA
+				)
+
+				#vis_output_img = cv2.cvtColor(vis_output_img, cv2.COLOR_BGR2RGB)
+
+				self.st.image(vis_output_img)
+
+	def overlay_instances(
+		self,
+		img,
+		boxes=None,
+		labels=None,
+		masks=None,
+		keypoints=None,
+		assigned_colors=None,
+		color=(255,0,0),
+		alpha=0.5,
+	):
+		N = len(boxes)
+		#assert N==len(labels)
+		#assert N==len(masks)
+		output = img
+		alpha = 0.6
+		beta = (1.0 - alpha)
+
+		final_masked_color = np.zeros_like(img)
+		for index, mask in enumerate(masks):
+			assert mask.shape == img.shape[:2]
+			mask = mask.astype(np.uint8)
+			#label_hash = int(hashlib.sha1(str(labels[index]).encode("utf-8")).hexdigest(), 16) % (2**32)
+			#color = random_color(seed=label_hash)
+			masked_color = np.ones_like(img) * 255
+			masked_color[:,:] = color
+			masked_color = cv2.bitwise_or(masked_color, masked_color, mask=mask)
+			final_masked_color = final_masked_color + masked_color
+		output = cv2.addWeighted(output, alpha, final_masked_color, beta, 0.0)
+		return output
 
 seg_input = pipeline_input("seg", 
 	{
@@ -495,11 +714,11 @@ seg_input = pipeline_input("seg",
 	}, {
 		'seg_pipeline_model': seg_pipeline_model,
 	}, {
-		'seg_pipeline_ensembler_1': seg_pipeline_ensembler_1
+		#'seg_pipeline_ensembler_1': seg_pipeline_ensembler_1
 	}, {
 		'iou_vis': iou_vis,
 		'video_vis': video_vis
-	})
+	}, p_pipeline_streamlit_visualizer=streamlit_viz)
 
 # Write the pipeline object to exported_pipeline
 exported_pipeline = seg_input
