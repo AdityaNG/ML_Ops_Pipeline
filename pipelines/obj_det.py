@@ -190,9 +190,9 @@ class obj_det_interp_1(pipeline_dataset_interpreter):
 
 class streamlit_viz(pipeline_streamlit_visualizer):
 
-	def visualize_new(self):
+	def visualize(self):
 		self.load_data()
-		st.markdown("# Visuals")
+		self.st.markdown("# Visuals")
 		preds = self.testing_predictions
 		y = self.dat['test']['y']
 		image_names_list = y["name"].unique()
@@ -204,6 +204,10 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 			'fn':0		# iou==0	
 		}
 		print("obj_det_data_visualizer: visualize")
+
+		iou_thresh_min, iou_thresh_max = st.sidebar.slider('IOU Threshold', 0, 100, [0,10])
+		iou_thresh_min, iou_thresh_max = iou_thresh_min/100.0, iou_thresh_max/100.0
+
 		for image_name in tqdm(image_names_list, file=sys.__stdout__):
 			iou_list = []
 			labels = y[y["name"]==image_name]
@@ -223,35 +227,42 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 						yolo_metrics['fp'] += 1
 				iou_list.append(largest_iou)
 
-			image_path = labels["image"].iloc[0]
-			img = cv2.imread(image_path)
-			for index1, lab in labels.iterrows():
-				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (255,255,0),2)
-			for index2, lab in detections.iterrows():
-				img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (0,255,0),2)
-			
 			min_iou = min(iou_list)
 			max_iou = max(iou_list)
 			avg_iou = sum(iou_list) / len(iou_list)
+
+			if iou_thresh_min <= min_iou and  max_iou <= iou_thresh_max:
+
+				image_path = labels["image"].iloc[0]
+				img = cv2.imread(image_path)
+				for index1, lab in labels.iterrows():
+					img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (255,255,0),2)
+				for index2, lab in detections.iterrows():
+					img = cv2.rectangle(img, (round(lab['xmin']), round(lab['ymin'])), (round(lab['xmax']), round(lab['ymax'])), (0,255,0),2)
+				
+				img = cv2.putText(img, 'min_iou='+str(round(min_iou,4)), (25,25), 
+					cv2.FONT_HERSHEY_SIMPLEX, 
+					0.5, 
+					(255, 0, 0), 
+					1, cv2.LINE_AA)
+
+				img = cv2.putText(img, 'max_iou='+str(round(max_iou,4)), (25,45), 
+					cv2.FONT_HERSHEY_SIMPLEX, 
+					0.5, 
+					(255, 0, 0), 
+					1, cv2.LINE_AA)
+
+				img = cv2.putText(img, 'avg_iou='+str(round(avg_iou,4)), (25,65), 
+					cv2.FONT_HERSHEY_SIMPLEX, 
+					0.5, 
+					(255, 0, 0), 
+					1, cv2.LINE_AA)
+
+				img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+				self.st.image(img)
 			
-			img = cv2.putText(img, 'min_iou='+str(round(min_iou,4)), (25,25), 
-				cv2.FONT_HERSHEY_SIMPLEX, 
-                0.5, 
-				(255, 0, 0), 
-				1, cv2.LINE_AA)
-
-			img = cv2.putText(img, 'max_iou='+str(round(max_iou,4)), (25,45), 
-				cv2.FONT_HERSHEY_SIMPLEX, 
-                0.5, 
-				(255, 0, 0), 
-				1, cv2.LINE_AA)
-
-			img = cv2.putText(img, 'avg_iou='+str(round(avg_iou,4)), (25,65), 
-				cv2.FONT_HERSHEY_SIMPLEX, 
-                0.5, 
-				(255, 0, 0), 
-				1, cv2.LINE_AA)
-
+			
 			#save_path = os.path.join(save_dir, str(datetime.datetime.now()).replace(" ", "_") + ".png")
 			
 			#if self.iou_compare(iou_list, self.iou_threshold):

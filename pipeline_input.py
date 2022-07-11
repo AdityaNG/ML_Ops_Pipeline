@@ -13,17 +13,6 @@ import pandas as pd
 import tensorflow as tf
 from constants import DATASET_DIR, MODEL_TRAINING, MODEL_TESTING, MODEL_VISUAL
 
-def show_image(img_path):
-	file_ = open(img_path, "rb")
-	contents = file_.read()
-	data_url = base64.b64encode(contents).decode("utf-8")
-	file_.close()
-
-	st.markdown(
-		f'<img width="80%" src="data:image/gif;base64,{data_url}" alt="cat gif">',
-		unsafe_allow_html=True,
-	)
-
 def source_hash(self) -> int:
 	if self == object:
 		return 0
@@ -130,12 +119,24 @@ class pipeline_data_visualizer(pipeline_classes):
 		pass
 
 class pipeline_streamlit_visualizer(pipeline_classes):
-	def __init__(self, pipeline) -> None:
+	def __init__(self, pipeline, streamlit) -> None:
 		super().__init__()
 		self.pipeline = pipeline
+		self.st = streamlit
+
+	def show_image(self, img_path):
+		file_ = open(img_path, "rb")
+		contents = file_.read()
+		data_url = base64.b64encode(contents).decode("utf-8")
+		file_.close()
+
+		self.st.markdown(
+			f'<img width="80%" src="data:image/gif;base64,{data_url}" alt="cat gif">',
+			unsafe_allow_html=True,
+		)
 		
 	def load_data(self):
-		self.pipeline_name = st.session_state.pipeline
+		self.pipeline_name = self.st.session_state.pipeline
 		#self.pipeline_name = self.pipeline.get_pipeline_name()
 
 		self.all_dataset_dir = DATASET_DIR.format(pipeline_name=self.pipeline_name)
@@ -144,40 +145,29 @@ class pipeline_streamlit_visualizer(pipeline_classes):
 		
 		self.model_classes = self.pipeline.get_pipeline_model()
 		
-		if 'model_name' not in st.session_state:
-			self.model_name = st.sidebar.selectbox(
-				'Model',
-				list(self.model_classes.keys()),
-				key='model_name',
-			)
-		else:
-			self.model_name = st.session_state['model_name']
+		self.model_name = self.st.sidebar.selectbox(
+			'Model',
+			list(self.model_classes.keys()),
+			key='model_name',
+		)
 
 		self.visualizers = self.pipeline.get_pipeline_visualizer()		
 
 		self.interpreter_list = self.pipeline.get_pipeline_dataset_interpreter()
-		if 'interpreter_name' not in st.session_state:
-			self.interpreter_name = st.sidebar.selectbox(
-				'Interpreter',
-				list(self.interpreter_list.keys()),
-				key='interpreter_name',
-			)
-		else:
-			self.interpreter_name = st.session_state['interpreter_name']
+		self.interpreter_name = self.st.sidebar.selectbox(
+			'Interpreter',
+			list(self.interpreter_list.keys()),
+			key='interpreter_name',
+		)
 
 		self.interpreter_dataset_dir = os.path.join(self.all_dataset_dir, self.interpreter_name)
 		self.interpreter_datasets = glob.glob(os.path.join(self.interpreter_dataset_dir,"*"))
-
-		if 'dataset_dir' not in st.session_state:
-			self.dataset_dir = st.sidebar.selectbox(
-				'Dataset Directory',
-				self.interpreter_datasets,
-				key='dataset_dir',
-			)
-		else:
-			self.dataset_dir = st.session_state['dataset_dir']
-
-
+		
+		self.dataset_dir = self.st.sidebar.selectbox(
+			'Dataset Directory',
+			self.interpreter_datasets,
+			key='dataset_dir',
+		)
 
 		training_dir = MODEL_TRAINING.format(
 			pipeline_name=self.pipeline_name,
@@ -213,50 +203,48 @@ class pipeline_streamlit_visualizer(pipeline_classes):
 
 		self.dat = self.interpreters[self.interpreter_name](self.dataset_dir).get_dataset()
 
-		st.markdown("# Testing Results")
-		st.write(self.testing_results)
-		#st.write(self.testing_predictions)
-
-		st.markdown("# Training Results")
-		st.write(self.training_results)
-		#st.write(self.training_predictions)
-
-		try:
-			st.markdown("# Dataset")
-			dat_test = self.dat['test']['x'].join(self.dat['test']['y'])
-			st.write(dat_test)
-		except:
-			pass
-		finally:
-			st.markdown("# Dataset X")
-			st.write(self.dat['test']['x'])
-			st.markdown("# Dataset Y")
-			st.write(self.dat['test']['y'])
 
 	def visualize(self):
 		self.load_data()
 
-		if 'visualizer_name' not in st.session_state:
-			self.visualizer_name = st.sidebar.selectbox(
-				'Visualizers',
-				list(self.visualizers.keys()),
-				key='visualizer_name',
-			)
-		else:
-			self.visualizer_name = st.session_state['visualizer_name']
+		self.st.markdown("# Testing Results")
+		self.st.write(self.testing_results)
+		#self.st.write(self.testing_predictions)
+
+		self.st.markdown("# Training Results")
+		self.st.write(self.training_results)
+		#self.st.write(self.training_predictions)
+
+		try:
+			self.st.markdown("# Dataset")
+			dat_test = self.dat['test']['x'].join(self.dat['test']['y'])
+			self.st.write(dat_test)
+		except:
+			pass
+		finally:
+			self.st.markdown("# Dataset X")
+			self.st.write(self.dat['test']['x'])
+			self.st.markdown("# Dataset Y")
+			self.st.write(self.dat['test']['y'])
+
+		self.visualizer_name = self.st.sidebar.selectbox(
+			'Visualizers',
+			list(self.visualizers.keys()),
+			key='visualizer_name',
+		)
 		
 		self.visual_dir = MODEL_VISUAL.format(pipeline_name=self.pipeline_name, interpreter_name=self.interpreter_name, model_name=self.model_name, visualizer_name=self.visualizer_name)
-		st.markdown("# Visuals")
+		self.st.markdown("# Visuals")
 		MAX_FRAMES = 5
 		frame_count = 0
 		for dirpath, dirnames, filenames in os.walk(self.visual_dir):
 			for f in filenames:
 				fp = os.path.join(dirpath, f)
-				st.markdown(fp)
+				self.st.markdown(fp)
 				if fp.endswith(".png"):
-					show_image(fp)
+					self.show_image(fp)
 				elif fp.endswith(".mp4"):
-					st.video(fp)
+					self.st.video(fp)
 				elif fp.endswith(".pkl"):
 					pass
 				else:

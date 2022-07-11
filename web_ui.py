@@ -35,7 +35,7 @@ def main():
 	#pipeline_name = st.session_state.pipeline
 	pipeline = all_inputs[pipeline_name]
 	viz_class = pipeline.get_pipeline_streamlit_visualizer()
-	viz = viz_class(pipeline)
+	viz = viz_class(pipeline, st)
 	viz.visualize()
 
 if __name__=="__main__":
