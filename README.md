@@ -96,7 +96,7 @@ python -m pip install git+https://github.com/AdityaNG/browsepy.git@galary_suppor
 
 Run streamlit web UI
 ```bash
-streamlit run web_ui.p
+streamlit run web_ui.py
 ```
 
 # Code Quality
