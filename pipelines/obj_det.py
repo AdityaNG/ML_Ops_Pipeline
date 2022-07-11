@@ -205,7 +205,7 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 		}
 		print("obj_det_data_visualizer: visualize")
 
-		iou_thresh_min, iou_thresh_max = st.sidebar.slider('IOU Threshold', 0, 100, [0,10])
+		iou_thresh_min, iou_thresh_max = self.st.sidebar.slider('IOU Threshold', 0, 100, [0,10])
 		iou_thresh_min, iou_thresh_max = iou_thresh_min/100.0, iou_thresh_max/100.0
 
 		for image_name in tqdm(image_names_list, file=sys.__stdout__):
@@ -262,12 +262,6 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 
 				self.st.image(img)
 			
-			
-			#save_path = os.path.join(save_dir, str(datetime.datetime.now()).replace(" ", "_") + ".png")
-			
-			#if self.iou_compare(iou_list, self.iou_threshold):
-				#cv2.imwrite(save_path, img)
-
 
 class iou_viz(pipeline_data_visualizer):
 	def __init__(self) -> None:
