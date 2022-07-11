@@ -233,8 +233,9 @@ class seg_cfg:
 
 		# add project-specific config (e.g., TensorMask) here if you're not running a model in detectron2's core library
 		# cfg.merge_from_file(model_zoo.get_config_file("/home/aditya/VSProjects/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml"))
-		#self.cfg.merge_from_file("/home/aditya/VSProjects/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
-		self.cfg.merge_from_file("/home/lxd1kor/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
+	
+		self.cfg.merge_from_file("/home/aditya/VSProjects/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
+		#self.cfg.merge_from_file("/home/lxd1kor/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
 		
 		self.cfg.merge_from_list([])
 		# Set score_threshold for builtin models
@@ -570,8 +571,9 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 		self.st.write(self.training_results)
 
 		self.st.markdown("# Visuals")
-		
-		if True:
+		training_data = False
+
+		if training_data:
 			preds = self.training_predictions
 			x = self.dat['train']['x']
 			y = self.dat['train']['y']
@@ -588,7 +590,7 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 			'fn':0		# iou==0	
 		}
 
-		iou_thresh_min, iou_thresh_max = self.st.sidebar.slider('IOU Threshold', 0, 100, [0,10])
+		iou_thresh_min, iou_thresh_max = self.st.sidebar.slider('IOU Threshold', 0, 100, [50,100])
 		iou_thresh_min, iou_thresh_max = iou_thresh_min/100.0, iou_thresh_max/100.0
 
 		dat_test = x.join(y)
@@ -613,7 +615,6 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 			pred_mask_list = model_pred["masks"].iloc[0]
 			pred_classes_list = model_pred["classes"].iloc[0]
 			pred_classes_list_final = []
-			print(pred_classes_list)
 			for ind, msk in enumerate(pred_mask_list):
 				pred_class = pred_classes_list[ind]
 				#if pred_class in (3, 4, 6, 8, ):
@@ -645,31 +646,51 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 				keypoints = model_pred['keypoints'].iloc[0]
 				masks = model_pred['masks'].iloc[0]
 
-				vis_output_img = self.overlay_instances(
-					img,
-					masks=pred_classes_list_final,
-					boxes=boxes,
-					labels=classes,
-					keypoints=keypoints,
-					assigned_colors=None,
-					alpha=0.5,
-				)
-				vis_output_img = self.overlay_instances(
-					vis_output_img,
-					masks=[gt_mask,],
-					boxes=boxes,
-					labels=classes,
-					keypoints=keypoints,
-					assigned_colors=None,
-					alpha=0.5,
-					color=(0,255,0)
-				)
+				# vis_output_img = self.overlay_instances(
+				# 	img,
+				# 	masks=[gt_mask,],
+				# 	boxes=boxes,
+				# 	labels=classes,
+				# 	keypoints=keypoints,
+				# 	assigned_colors=None,
+				# 	alpha=0.666,
+				# 	color=(0,255,0)
+				# )
+
+				# vis_output_img = self.overlay_instances(
+				# 	vis_output_img,
+				# 	masks=pred_classes_list_final,
+				# 	boxes=boxes,
+				# 	labels=classes,
+				# 	keypoints=keypoints,
+				# 	assigned_colors=None,
+				# 	alpha=0.666,
+				# )
+
+				gt_masked_color = np.ones_like(img)
+				gt_masked_color[:,:] = (0,255,0)
+				gt_masked_color = cv2.bitwise_or(gt_masked_color, gt_masked_color, mask=gt_mask.astype(np.uint8))
+
+				final_masked_color = np.zeros_like(img)
+				for index, mask in enumerate(pred_classes_list_final):
+					mask = mask.astype(np.uint8)
+					#label_hash = int(hashlib.sha1(str(labels[index]).encode("utf-8")).hexdigest(), 16) % (2**32)
+					#color = random_color(seed=label_hash)
+					masked_color = np.ones_like(img) * 255
+					masked_color[:,:] = (255,0,0)
+					masked_color = cv2.bitwise_or(masked_color, masked_color, mask=mask)
+					final_masked_color = final_masked_color + masked_color
+				
+				
+				final_masked_color = final_masked_color + gt_masked_color
+
+				vis_output_img = cv2.addWeighted(img, 0.75, final_masked_color, 0.25, 0.0)
 
 				vis_output_img = cv2.putText(vis_output_img, 'IOU='+str(round(IOU,4)), (25,50), 
 					cv2.FONT_HERSHEY_SIMPLEX, 
-					1, 
+					2, 
 					(255, 0, 0), 
-					1, cv2.LINE_AA
+					2, cv2.LINE_AA
 				)
 
 				#vis_output_img = cv2.cvtColor(vis_output_img, cv2.COLOR_BGR2RGB)
@@ -691,7 +712,7 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 		#assert N==len(labels)
 		#assert N==len(masks)
 		output = img
-		alpha = 0.6
+		#alpha = 0.6
 		beta = (1.0 - alpha)
 
 		final_masked_color = np.zeros_like(img)

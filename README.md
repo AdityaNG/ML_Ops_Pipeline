@@ -1,5 +1,7 @@
 # Toy ML Ops Pipeline
 
+<img width="70%" src="imgs/demo.gif" />
+
 A simple demonstration of an ML Ops pipeline involving three stages:
 1. Data Ingestion
 2. Model Training
