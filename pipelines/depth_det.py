@@ -116,6 +116,7 @@ class depth_evaluator:
 
 	def evaluate(self, x: pd.DataFrame, y, plot=False):
 		predict_results = []
+		
 		for inxex, row in tqdm(x.iterrows(), total=x.shape[0]):
 			pred = self.predict(row)
 			predict_results.append(pred)
