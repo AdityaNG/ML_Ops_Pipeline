@@ -221,11 +221,12 @@ class pipeline_streamlit_visualizer(pipeline_classes):
 			self.st.write(dat_test)
 		except:
 			pass
-		finally:
 			self.st.markdown("# Dataset X")
 			self.st.write(self.dat['test']['x'])
 			self.st.markdown("# Dataset Y")
 			self.st.write(self.dat['test']['y'])
+		finally:
+			pass
 
 		self.visualizer_name = self.st.sidebar.selectbox(
 			'Visualizers',
