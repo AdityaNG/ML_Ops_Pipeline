@@ -39,16 +39,27 @@ class seg_kitti(pipeline_dataset_interpreter):
 
 	def generate_data(self, dataset):
 		dataset_train, dataset_test = train_test_split(dataset, test_size=0.1, random_state=1)
-		# x_train, y_train = dataset_train[['image_2']], dataset_train[['instance', 'semantic', 'semantic_rgb']]
-		# x_test, y_test = dataset_test[['image_2']], dataset_test[['instance', 'semantic', 'semantic_rgb']]
-		x_train, y_train = dataset_train[['image_2']], dataset_train[['semantic_rgb']]
-		x_test, y_test = dataset_test[['image_2']], dataset_test[['semantic_rgb']]
+		x_train, y_train = dataset_train[['image_2']], dataset_train[['semantic_rgb', 'color_map']]
+		x_test, y_test = dataset_test[['image_2']], dataset_test[['semantic_rgb', 'color_map']]
 		return x_train, y_train, x_test, y_test
 
 
 	def load(self) -> None:
 
 		dataset = {}
+		# Mapping: https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py
+		color_map = {
+			'vehicle': [
+				(142, 0, 0),	# Car
+				(70, 0, 0),		# Truck
+				(100, 60, 0),	# Bus
+				(90, 0, 0),		# Caravan
+				(110, 0, 0),	# Trailer
+				(230, 0, 0),	# Motorcycle
+				(32, 11, 119),	# Bicycle
+				(0, 0, 255)		# Rider
+			]
+		}
 
 		for mode in ('testing', 'training'):
 			print("Loading seg_kitti from:", self.input_dir)
@@ -66,11 +77,11 @@ class seg_kitti(pipeline_dataset_interpreter):
 			if mode=='training':
 				dataset[mode] = {
 					# 'image_2': [], 'instance': [], 'semantic': [], 'semantic_rgb': []
-					'image_2': [], 'semantic_rgb': [], #'gt_mask': []
+					'image_2': [], 'semantic_rgb': [], 'color_map': []
 				}
 			else:
 				dataset[mode] = {
-					'image_2': []
+					'image_2': [], 'color_map': []
 				}
 			image_2_files_list = sorted(glob.glob(os.path.join(image_2_folder, "*.png")))
 			files_list = list(map(lambda x: x.split("/")[-1].split(".png")[:-1][0], image_2_files_list))
@@ -89,22 +100,9 @@ class seg_kitti(pipeline_dataset_interpreter):
 					assert os.path.exists(semantic_rgb_path), semantic_rgb_path
 				
 				dataset[mode]['image_2'] += [image_2_path]
+				dataset[mode]['color_map'] += [color_map]
 				if mode=='training':
-					# Mapping: https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py
-					#dataset[mode]['instance'] += [instance_path]
-					#dataset[mode]['semantic'] += [semantic_path]
-					# img = cv2.imread(image_2_path)
-					# mask_car = (img == (142, 0, 0)).all(-1)
-					# mask_truck = (img == (70, 0, 0)).all(-1)
-					# mask_bus = (img == (100, 60, 0)).all(-1)
-					# mask_caravan = (img == (90, 0, 0)).all(-1)
-					# mask_trailer = (img == (110, 0, 0)).all(-1)
-					# mask_truck = (img == (230, 0, 0)).all(-1)
-
-					# mask = mask_car + mask_truck + mask_bus + mask_caravan + mask_trailer + mask_truck
-
 					dataset[mode]['semantic_rgb'] += [semantic_rgb_path]
-					# dataset[mode]['gt_mask'] += [mask]
 				
 			dataset[mode] = pd.DataFrame(dataset[mode])
 		
@@ -138,12 +136,9 @@ class interp_airsim(pipeline_dataset_interpreter):
     }
 
 	def generate_data(self, dataset):
-		# dataset_train, dataset_test = train_test_split(dataset, test_size=0.1, random_state=1)
-		# x_train, y_train = dataset_train[['image_2']], dataset_train[['instance', 'semantic', 'semantic_rgb']]
-		# x_test, y_test = dataset_test[['image_2']], dataset_test[['instance', 'semantic', 'semantic_rgb']]
 		dataset_train, dataset_test = train_test_split(dataset, test_size=0.1, random_state=1)
-		x_train, y_train = dataset_train[['image_2']], dataset_train[['semantic_rgb']]
-		x_test, y_test = dataset_test[['image_2']], dataset_test[['semantic_rgb']]
+		x_train, y_train = dataset_train[['image_2']], dataset_train[['semantic_rgb', 'color_map']]
+		x_test, y_test = dataset_test[['image_2']], dataset_test[['semantic_rgb', 'color_map']]
 		return x_train, y_train, x_test, y_test
 
 	def load(self) -> None:
@@ -173,7 +168,14 @@ class interp_airsim(pipeline_dataset_interpreter):
 		x_vals["ImageFile"] = []
 
 		dataset = {
-			'image_2': [], 'semantic_rgb': []
+			'image_2': [], 'semantic_rgb': [], 'color_map': []
+		}
+
+		color_map = {
+			'vehicle': [
+				(182, 145, 184),	# Car
+				(135, 150, 152),	# Car again
+			]
 		}
 
 		df.sort_values('TimeStamp', ascending=False)
@@ -186,24 +188,19 @@ class interp_airsim(pipeline_dataset_interpreter):
 			semantic_rgb = None
 			for f in files:
 				cam_id, img_format = f.split("_")[2:4]
-				# if img_format in (1,2,3,4,5,6):
-				# 	gt_images.append(os.path.join(images_folder, f))
-				# 	assert os.path.exists(gt_images[-1])
+
 				if cam_id=='0':
 					if img_format=='0':
 						image_2 = os.path.join(images_folder, f)
 						assert os.path.exists(image_2)
-						#dataset['image_2'] += [image_2]
 					elif img_format=='5':
 						semantic_rgb = os.path.join(images_folder, f)
 						assert os.path.exists(semantic_rgb)
-						#dataset['semantic_rgb'] += [semantic_rgb]
-				# elif img_format=='':
-				# 	instance = os.path.join(images_folder, f)
-				# 	assert os.path.exists(instance)
+						
 			if type(image_2)!=type(None) and type(semantic_rgb)!=type(None):
 				dataset['image_2'] += [image_2]
 				dataset['semantic_rgb'] += [semantic_rgb]
+				dataset['color_map'] += [color_map]
 				
 			for col in df.columns:
 				if col!="ImageFile":
@@ -211,9 +208,8 @@ class interp_airsim(pipeline_dataset_interpreter):
 			x_vals["ImageFile"] += [";".join(input_images)]
 		
 		dataset = pd.DataFrame(dataset)
-		#x_train, y_train, x_test, y_test = self.generate_data(dataset)
-		#x_train, y_train = dataset['image_2'], dataset['semantic_rgb']
-		x_train, y_train = dataset, dataset
+		
+		x_train, y_train = dataset[['image_2']], dataset[['semantic_rgb', 'color_map']]
 		self.dataset = {
 			'train': {
 				'x': x_train,
@@ -228,15 +224,12 @@ class interp_airsim(pipeline_dataset_interpreter):
 		}
 
 class seg_cfg:
+	config_path = os.path.expanduser("~/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
+
 	def get_cfg(self):
 		self.cfg = get_cfg()
-
-		# add project-specific config (e.g., TensorMask) here if you're not running a model in detectron2's core library
-		# cfg.merge_from_file(model_zoo.get_config_file("/home/aditya/VSProjects/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml"))
-	
-		self.cfg.merge_from_file("/home/aditya/VSProjects/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
-		#self.cfg.merge_from_file("/home/lxd1kor/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
-		
+		#self.cfg.merge_from_file(os.path.expanduser("~/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml"))
+		self.cfg.merge_from_file(self.config_path)
 		self.cfg.merge_from_list([])
 		# Set score_threshold for builtin models
 		self.cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.5
@@ -252,11 +245,7 @@ class seg_cfg:
 
 		self.cfg.freeze()
 
-class seg_data_visualizer(seg_cfg, pipeline_data_visualizer):
-
-	def __init__(self) -> None:
-		super().__init__()
-		self.get_cfg()
+class seg_data_visualizer(pipeline_data_visualizer):
 
 	def overlay_instances(
 		self,
@@ -420,19 +409,17 @@ class seg_evaluator:
 		}
 
 		dat_test = x.join(y)
-		for index, row in dat_test.iterrows():
+		print("Evaluate")
+		for index, row in tqdm(dat_test.iterrows(), total=dat_test.shape[0]):
 			img = cv2.imread(row['image_2'])
 			semantic_rgb = cv2.imread(row['semantic_rgb'])
-			mask_car = (semantic_rgb == (142, 0, 0)).all(-1)
-			mask_truck = (semantic_rgb == (70, 0, 0)).all(-1)
-			mask_bus = (semantic_rgb == (100, 60, 0)).all(-1)
-			mask_caravan = (semantic_rgb == (90, 0, 0)).all(-1)
-			mask_trailer = (semantic_rgb == (110, 0, 0)).all(-1)
-			mask_motorcycle = (semantic_rgb == (230, 0, 0)).all(-1)
-			mask_bicycle = (semantic_rgb == (32, 11, 119)).all(-1)
-			mask_rider = (semantic_rgb == (0, 0, 255)).all(-1)
-			 
-			gt_mask = mask_car + mask_truck + mask_bus + mask_caravan + mask_trailer + mask_motorcycle + mask_bicycle + mask_rider
+			semantic_rgb = cv2.resize(semantic_rgb, dsize=(img.shape[1], img.shape[0]), interpolation=cv2.INTER_CUBIC)
+			color_map = row['color_map']
+
+			gt_mask = np.full(semantic_rgb.shape[:2], False, dtype=bool)
+			for class_name in color_map:
+				for color in color_map[class_name]:
+					gt_mask += (semantic_rgb == color).all(-1)
 
 			pred_mask = np.full(gt_mask.shape, False, dtype=bool)
 
@@ -477,8 +464,7 @@ class seg_evaluator:
 		}
 		return results, preds
 
-
-class seg_pipeline_model(seg_cfg, seg_evaluator, pipeline_model):
+class detectron_base_model(seg_evaluator, pipeline_model, seg_cfg):
 
 	def load(self):
 		self.get_cfg()
@@ -488,7 +474,7 @@ class seg_pipeline_model(seg_cfg, seg_evaluator, pipeline_model):
 		#preds = self.predict(x)
 
 		# TODO: Train the model		
-		results, preds =self.evaluate(x,y)
+		results, preds = self.evaluate(x,y)
 
 		return results, preds
 
@@ -502,6 +488,7 @@ class seg_pipeline_model(seg_cfg, seg_evaluator, pipeline_model):
 			'classes': [],
 			'keypoints': [],
 			'masks': [],
+			'model_output_classes': []
 		}
 		for index, row in tqdm(x.iterrows(), total=x.shape[0]):
 		# 	# TODO produce model predictions
@@ -528,10 +515,48 @@ class seg_pipeline_model(seg_cfg, seg_evaluator, pipeline_model):
 			predict_results['classes'] += [classes, ]
 			predict_results['keypoints'] += [keypoints, ]
 			predict_results['masks'] += [masks, ]
+			predict_results['model_output_classes'] += [self.model_output_classes, ]
+
 
 		predict_results = pd.DataFrame(predict_results)
 		return predict_results
 
+
+class mask_rcnn(detectron_base_model):
+	config_path = os.path.expanduser("~/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
+	model_output_classes = {
+		'vehicle':  (2, 3, 5, 7, )
+	}
+
+import sys
+sys.path.append(os.path.expanduser("~/detectron2/projects/PointRend/"))
+from point_rend import add_pointrend_config
+
+class pointrend(detectron_base_model):
+	config_path = os.path.expanduser("~/detectron2/projects/PointRend/configs/InstanceSegmentation/Base-Implicit-PointRend.yaml")
+	model_output_classes = {
+		'vehicle':  (26,51,27,52,15,67)
+	}
+	#config_path = os.path.expanduser("~/detectron2/projects/PointRend/configs/SemanticSegmentation/Base-PointRend-Semantic-FPN.yaml")
+	def get_cfg(self):
+		self.cfg = get_cfg()
+
+		add_pointrend_config(self.cfg)
+		self.cfg.merge_from_file(self.config_path)
+		self.cfg.merge_from_list([])
+		# Set score_threshold for builtin models
+		self.cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.5
+		self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
+		self.cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.5
+
+		self.metadata = MetadataCatalog.get(
+			self.cfg.DATASETS.TEST[0] if len(self.cfg.DATASETS.TEST) else "__unused"
+		)
+		self.instance_mode = ColorMode.IMAGE
+
+		self.cpu_device = torch.device("cpu")
+
+		self.cfg.freeze()
 
 class seg_pipeline_ensembler_1(seg_evaluator, pipeline_ensembler):
 
@@ -592,36 +617,35 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 
 		iou_thresh_min, iou_thresh_max = self.st.sidebar.slider('IOU Threshold', 0, 100, [50,100])
 		iou_thresh_min, iou_thresh_max = iou_thresh_min/100.0, iou_thresh_max/100.0
-
+		
 		dat_test = x.join(y)
 		for index, row in dat_test.iterrows():
 			img = cv2.imread(row['image_2'])
 			semantic_rgb = cv2.imread(row['semantic_rgb'])
-			mask_car = (semantic_rgb == (142, 0, 0)).all(-1)
-			mask_truck = (semantic_rgb == (70, 0, 0)).all(-1)
-			mask_bus = (semantic_rgb == (100, 60, 0)).all(-1)
-			mask_caravan = (semantic_rgb == (90, 0, 0)).all(-1)
-			mask_trailer = (semantic_rgb == (110, 0, 0)).all(-1)
-			mask_motorcycle = (semantic_rgb == (230, 0, 0)).all(-1)
-			mask_bicycle = (semantic_rgb == (32, 11, 119)).all(-1)
-			mask_rider = (semantic_rgb == (0, 0, 255)).all(-1)
-			mask_train = (semantic_rgb == (100, 80, 0)).all(-1)
-			 
-			gt_mask = mask_car + mask_truck + mask_bus + mask_caravan + mask_trailer + mask_motorcycle + mask_bicycle + mask_rider + mask_train
+			semantic_rgb = cv2.resize(semantic_rgb, dsize=(img.shape[1], img.shape[0]), interpolation=cv2.INTER_CUBIC)
+			color_map = row['color_map']
+			
+
+			gt_mask = np.full(semantic_rgb.shape[:2], False, dtype=bool)
+			for class_name in color_map:
+				for color in color_map[class_name]:
+					gt_mask += (semantic_rgb == color).all(-1)
 
 			pred_mask = np.full(gt_mask.shape, False, dtype=bool)
 
 			model_pred = preds[preds["image_2"]==row['image_2']]
 			pred_mask_list = model_pred["masks"].iloc[0]
 			pred_classes_list = model_pred["classes"].iloc[0]
+			model_output_classes = preds['model_output_classes'].iloc[0]
 			pred_classes_list_final = []
+			print(pred_classes_list, model_output_classes)
 			for ind, msk in enumerate(pred_mask_list):
 				pred_class = pred_classes_list[ind]
 				#if pred_class in (3, 4, 6, 8, ):
-				if pred_class in (2, 3, 5, 7, ):
-					#pred_mask += msk
-					pred_mask = np.logical_or(pred_mask, msk)
-					pred_classes_list_final.append(msk)
+				for class_name in color_map:
+					if pred_class in model_output_classes[class_name]:
+						pred_mask = np.logical_or(pred_mask, msk)
+						pred_classes_list_final.append(msk)
 			
 			intersection = np.logical_and(gt_mask, pred_mask)
 			union = np.logical_or(gt_mask, pred_mask)
@@ -639,33 +663,6 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 			if iou_thresh_min <= IOU and IOU <= iou_thresh_max:
 				img = read_image(row['image_2'])
 				semantic_rgb = read_image(y[x['image_2']==row['image_2']]['semantic_rgb'].iloc[0])
-
-				boxes = model_pred['boxes'].iloc[0]
-				scores = model_pred['scores'].iloc[0]
-				classes = model_pred['classes'].iloc[0]
-				keypoints = model_pred['keypoints'].iloc[0]
-				masks = model_pred['masks'].iloc[0]
-
-				# vis_output_img = self.overlay_instances(
-				# 	img,
-				# 	masks=[gt_mask,],
-				# 	boxes=boxes,
-				# 	labels=classes,
-				# 	keypoints=keypoints,
-				# 	assigned_colors=None,
-				# 	alpha=0.666,
-				# 	color=(0,255,0)
-				# )
-
-				# vis_output_img = self.overlay_instances(
-				# 	vis_output_img,
-				# 	masks=pred_classes_list_final,
-				# 	boxes=boxes,
-				# 	labels=classes,
-				# 	keypoints=keypoints,
-				# 	assigned_colors=None,
-				# 	alpha=0.666,
-				# )
 
 				gt_masked_color = np.ones_like(img)
 				gt_masked_color[:,:] = (0,255,0)
@@ -733,7 +730,9 @@ seg_input = pipeline_input("seg",
 		'seg_kitti': seg_kitti,
 		'interp_airsim':interp_airsim
 	}, {
-		'seg_pipeline_model': seg_pipeline_model,
+		#'detectron_base_model': detectron_base_model,
+		'mask_rcnn': mask_rcnn,
+		'pointrend': pointrend
 	}, {
 		#'seg_pipeline_ensembler_1': seg_pipeline_ensembler_1
 	}, {
