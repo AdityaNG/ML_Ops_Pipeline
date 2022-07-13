@@ -35,7 +35,7 @@ exported_pipeline = template_input
 
 To validate if you pipeline has been exported correctly, run the following. Any errors faced while processing your pipeline will be output here. For example here, the `cifar10_cnn.py` has thrown an error and the stacktrace has been printed
 ```console
-lxd1kor@BANI-C-0069L:~/ML_Ops_Pipeline$ python all_pipelines.py 
+$ python all_pipelines.py 
 ['obj_det.py', 'template.py', 'depth_det.py', 'cifar10_cnn.py']
 -----------------------------------------------------------------------------
 Loading:  obj_det.py
