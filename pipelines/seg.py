@@ -380,7 +380,6 @@ class video_vis(seg_data_visualizer):
 
 			if writer is None:
 				size = vis_output_img.shape[:2]
-				print("size:", size)
 				output_path = os.path.join(save_dir, 'output.mp4')
 				if os.path.exists(output_path):
 					os.remove(output_path)
@@ -426,11 +425,18 @@ class seg_evaluator:
 			model_pred = preds[preds["image_2"]==row['image_2']]
 			pred_mask_list = model_pred["masks"].iloc[0]
 			pred_classes_list = model_pred["classes"].iloc[0]
+			model_output_classes = preds['model_output_classes'].iloc[0]
+			pred_classes_list_final = []
 			for ind, msk in enumerate(pred_mask_list):
 				pred_class = pred_classes_list[ind]
-				if pred_class in (2, 3, 5, 7):
-					pred_mask += msk
+				#if pred_class in (3, 4, 6, 8, ):
+				for class_name in color_map:
+					if pred_class in model_output_classes[class_name]:
+						pred_mask = np.logical_or(pred_mask, msk)
+						pred_classes_list_final.append(msk)
 			
+			pred_classes_list = pred_classes_list_final
+
 			intersection = np.logical_and(gt_mask, pred_mask)
 			union = np.logical_or(gt_mask, pred_mask)
 			IOU = np.sum(intersection) / np.sum(union)
@@ -481,6 +487,7 @@ class detectron_base_model(seg_evaluator, pipeline_model, seg_cfg):
 	def predict(self, x) -> np.array:
 		# Runs prediction on list of values x of length n
 		# Returns a list of values of length n
+
 		predict_results = {
 			'image_2': [],
 			'boxes': [],
@@ -509,6 +516,7 @@ class detectron_base_model(seg_evaluator, pipeline_model, seg_cfg):
 			else:
 				masks = None
 
+
 			predict_results['image_2'] += [row['image_2'], ]
 			predict_results['boxes'] += [boxes, ]
 			predict_results['scores'] += [scores, ]
@@ -524,39 +532,41 @@ class detectron_base_model(seg_evaluator, pipeline_model, seg_cfg):
 
 class mask_rcnn(detectron_base_model):
 	config_path = os.path.expanduser("~/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
+
 	model_output_classes = {
 		'vehicle':  (2, 3, 5, 7, )
 	}
 
-import sys
-sys.path.append(os.path.expanduser("~/detectron2/projects/PointRend/"))
-from point_rend import add_pointrend_config
+# import sys
+# sys.path.append(os.path.expanduser("~/detectron2/projects/PointRend/"))
+# from point_rend import add_pointrend_config
 
-class pointrend(detectron_base_model):
-	config_path = os.path.expanduser("~/detectron2/projects/PointRend/configs/InstanceSegmentation/Base-Implicit-PointRend.yaml")
-	model_output_classes = {
-		'vehicle':  (26,51,27,52,15,67)
-	}
-	#config_path = os.path.expanduser("~/detectron2/projects/PointRend/configs/SemanticSegmentation/Base-PointRend-Semantic-FPN.yaml")
-	def get_cfg(self):
-		self.cfg = get_cfg()
+# class pointrend(detectron_base_model):
+# 	#config_path = os.path.expanduser("~/detectron2/projects/PointRend/configs/InstanceSegmentation/Base-Implicit-PointRend.yaml")
+# 	config_path = os.path.expanduser("~/detectron2/projects/PointRend/configs/SemanticSegmentation/pointrend_semantic_R_101_FPN_1x_cityscapes.yaml")
+# 	model_output_classes = {
+# 		'vehicle':  (26,51,27,52,15,67)
+# 	}
+# 	#config_path = os.path.expanduser("~/detectron2/projects/PointRend/configs/SemanticSegmentation/Base-PointRend-Semantic-FPN.yaml")
+# 	def get_cfg(self):
+# 		self.cfg = get_cfg()
 
-		add_pointrend_config(self.cfg)
-		self.cfg.merge_from_file(self.config_path)
-		self.cfg.merge_from_list([])
-		# Set score_threshold for builtin models
-		self.cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.5
-		self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
-		self.cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.5
+# 		add_pointrend_config(self.cfg)
+# 		self.cfg.merge_from_file(self.config_path)
+# 		self.cfg.merge_from_list([])
+# 		# Set score_threshold for builtin models
+# 		self.cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.5
+# 		self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
+# 		self.cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.5
 
-		self.metadata = MetadataCatalog.get(
-			self.cfg.DATASETS.TEST[0] if len(self.cfg.DATASETS.TEST) else "__unused"
-		)
-		self.instance_mode = ColorMode.IMAGE
+# 		self.metadata = MetadataCatalog.get(
+# 			self.cfg.DATASETS.TEST[0] if len(self.cfg.DATASETS.TEST) else "__unused"
+# 		)
+# 		self.instance_mode = ColorMode.IMAGE
 
-		self.cpu_device = torch.device("cpu")
+# 		self.cpu_device = torch.device("cpu")
 
-		self.cfg.freeze()
+# 		self.cfg.freeze()
 
 class seg_pipeline_ensembler_1(seg_evaluator, pipeline_ensembler):
 
@@ -638,7 +648,6 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 			pred_classes_list = model_pred["classes"].iloc[0]
 			model_output_classes = preds['model_output_classes'].iloc[0]
 			pred_classes_list_final = []
-			print(pred_classes_list, model_output_classes)
 			for ind, msk in enumerate(pred_mask_list):
 				pred_class = pred_classes_list[ind]
 				#if pred_class in (3, 4, 6, 8, ):
@@ -732,7 +741,7 @@ seg_input = pipeline_input("seg",
 	}, {
 		#'detectron_base_model': detectron_base_model,
 		'mask_rcnn': mask_rcnn,
-		'pointrend': pointrend
+		# 'pointrend': pointrend
 	}, {
 		#'seg_pipeline_ensembler_1': seg_pipeline_ensembler_1
 	}, {

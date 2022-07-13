@@ -68,13 +68,11 @@ class pipeline_dataset_interpreter(pipeline_classes):
 
 
 class pipeline_model(pipeline_classes):
-	model = None
-
+	model = None     
 	def __init__(self, training_dir, load=True) -> None:
 		self.training_dir = training_dir
 		if load:
 			self.load()
-
 
 	def get_model(self) -> tf.keras.Model:
 		return self.model

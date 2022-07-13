@@ -535,10 +535,10 @@ obj_det_input = pipeline_input("obj_det",
 	}, 
 	p_model={
 		'obj_det_pipeline_model_yolov5n': obj_det_pipeline_model_yolov5n,
-		# 'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
+		'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
 		'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
-		# 'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
-		# 'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
+		'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
+		'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
 	}, 
 	p_ensembler={
 		'obj_det_pipeline_ensembler_1': obj_det_pipeline_ensembler_1
