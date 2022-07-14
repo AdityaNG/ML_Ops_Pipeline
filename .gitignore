@@ -167,3 +167,4 @@ logs/
 history/
 
 *.pkl
+remote_pipelines/

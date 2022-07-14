@@ -8,16 +8,19 @@ LOG_DIR = "logs/"
 #MODEL_VALIDATION_SETTINGS = "data/{pipeline_name}/model_validation_settings.pkl"
 
 MODEL_BASE = "data/{pipeline_name}/models/"
-MODEL_TRAINING = "data/{pipeline_name}/models/{model_name}/training/{interpreter_name}"
-MODEL_TESTING = "data/{pipeline_name}/models/{model_name}/testing/{interpreter_name}"
-MODEL_VISUAL = "data/{pipeline_name}/visuals/{interpreter_name}/{model_name}/{visualizer_name}/" 
+MODEL_TRAINING = "data/{pipeline_name}/models/{model_name}/{commit_id}/training/{interpreter_name}"
+MODEL_TESTING = "data/{pipeline_name}/models/{model_name}/{commit_id}/testing/{interpreter_name}"
+MODEL_VISUAL = "data/{pipeline_name}/visuals/{model_name}/{commit_id}/{interpreter_name}/{visualizer_name}/" 
 
-ENSEMBLE_BASE = "data/{pipeline_name}/ensemblers/"
-ENSEMBLE_TRAINING = "data/{pipeline_name}/ensemblers/{ensembler_name}/training/{interpreter_name}"
-ENSEMBLE_TESTING = "data/{pipeline_name}/ensemblers/{ensembler_name}/testing/{interpreter_name}"
-ENSEMBLE_VISUAL = "data/{pipeline_name}/visuals/{visualizer_name}/ensemblers/{ensembler_name}/interpreter/{interpreter_name}"
+# ENSEMBLE_BASE = "data/{pipeline_name}/ensemblers/"
+# ENSEMBLE_TRAINING = "data/{pipeline_name}/ensemblers/{ensembler_name}/{commit_id}/training/{interpreter_name}"
+# ENSEMBLE_TESTING = "data/{pipeline_name}/ensemblers/{ensembler_name}/{commit_id}/testing/{interpreter_name}"
+# ENSEMBLE_VISUAL = "data/{pipeline_name}/visuals/{visualizer_name}/{commit_id}/ensemblers/{ensembler_name}/interpreter/{interpreter_name}"
 
 HISTORY_PATH = "history/"
+
+REMOTE_PIPELINES_DIR = "remote_pipelines/"
+REMOTE_PIPELINES_TXT = "remote_pipelines.txt"
 
 def folder_last_modified(folder):
 	last_modified = []

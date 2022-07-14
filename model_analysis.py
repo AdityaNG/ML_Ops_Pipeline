@@ -17,6 +17,49 @@ from pipeline_input import source_hash
 from constants import DATASET_DIR, MODEL_TESTING, MODEL_TRAINING, folder_last_modified
 from history import local_history
 
+import traceback
+
+def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified):
+	print("-"*10)
+	print("model_name:\t",model_name)
+	print("interpreter_name:\t",interpreter_name)
+	print("dataset_dir:\t",dataset_dir)
+
+	try:
+		testing_dir = MODEL_TESTING.format(
+			pipeline_name=pipeline_name,
+			interpreter_name=interpreter_name,
+			model_name=model_name
+		)
+		os.makedirs(testing_dir, exist_ok=True)
+		training_dir = MODEL_TRAINING.format(
+			pipeline_name=pipeline_name,
+			interpreter_name=interpreter_name,
+			model_name=model_name
+		)
+		os.makedirs(training_dir, exist_ok=True)
+
+		dat = interpreters[interpreter_name](dataset_dir).get_dataset()
+		mod = model_classes[model_name](training_dir)
+		#mod.predict(dat['test'])
+		results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
+		#print(results)
+		results_pkl = os.path.join(testing_dir, "results.pkl")
+		predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+
+		results_handle = open(results_pkl, 'wb')
+		pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+		results_handle.close()
+
+		predictions_handle = open(predictions_pkl, 'wb')
+		pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+		predictions_handle.close()
+		return (True, task_id, model_last_modified)
+	except Exception as ex:
+		print(ex)
+		traceback.print_exc()
+		return (False, task_id, model_last_modified)
+
 def main():
 	loc_hist = local_history(__file__)
 	task_list = {}
@@ -52,6 +95,8 @@ def main():
 						task_list[pipeline_name].setdefault(interpreter_name, {})
 						task_list[pipeline_name][interpreter_name].setdefault(dataset_dir, {})
 						task_list[pipeline_name][interpreter_name][dataset_dir].setdefault(model_name, (task_id, model_last_modified))
+
+						analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
 
 	if task_list == {}:
 		#print("Waiting for new tasks...")

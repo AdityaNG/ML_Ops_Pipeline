@@ -16,6 +16,7 @@ def get_all_inputs():
 	global all_inputs, all_inputs_modules
 
 	pipelines_list = list(map(lambda x: x.split("/")[-1],glob.glob('pipelines/*')))
+	#pipelines_list = list(map(lambda x: x.split("/")[-1],glob.glob('remote_pipelines/*')))
 	pipelines_list = list(filter(lambda x: x not in ["template", "__pycache__", "README.md"], pipelines_list))
 	if log:
 		print(pipelines_list)
