@@ -550,18 +550,6 @@ class obj_det_pipeline_ensembler_1(obj_det_evaluator, pipeline_ensembler):
 		return results, preds
 
 
-# class template_interp_1(pipeline_dataset_interpreter):
-# 	pass
-# class template_data_visualizer(pipeline_data_visualizer):
-# 	pass
-# class template_evaluator:
-# 	pass
-# class template_pipeline_model(template_evaluator, pipeline_model):
-# 	pass
-# class template_pipeline_ensembler_1(template_evaluator, pipeline_ensembler):
-# 	pass
-
-
 class obj_det_pipeline_model_frcnn(obj_det_evaluator, pipeline_model):
 	def load(self):
 		self.cfg = get_cfg()
