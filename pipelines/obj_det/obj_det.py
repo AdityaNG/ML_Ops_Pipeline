@@ -19,10 +19,32 @@ sys.path.append('../')
 from pipeline_input import *
 from constants import *
 
+
+import warnings as wr
+
+wr.filterwarnings("ignore")
+
+import detectron2
+from detectron2.utils.logger import setup_logger
+setup_logger()
+
+# import some common libraries
+import numpy as np
+import os, json, cv2, random
+# from google.colab.patches 
+# import cv2_imshow
+
+# import some common detectron2 utilities
+from detectron2 import model_zoo
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2.utils.visualizer import Visualizer
+from detectron2.data import MetadataCatalog, DatasetCatalog
+
 class KITTI_lemenko_interp(pipeline_dataset_interpreter):
 
 	def load_calibration(self, calib_file_name):
-		print(calib)
+		#print(calib)
 		calib = {}
 		f = open(calib_file_name, "r")
 		for line in f:
@@ -528,12 +550,58 @@ class obj_det_pipeline_ensembler_1(obj_det_evaluator, pipeline_ensembler):
 		return results, preds
 
 
+# class template_interp_1(pipeline_dataset_interpreter):
+# 	pass
+# class template_data_visualizer(pipeline_data_visualizer):
+# 	pass
+# class template_evaluator:
+# 	pass
+# class template_pipeline_model(template_evaluator, pipeline_model):
+# 	pass
+# class template_pipeline_ensembler_1(template_evaluator, pipeline_ensembler):
+# 	pass
+
+
+class obj_det_pipeline_model_frcnn(obj_det_evaluator, pipeline_model):
+	def load(self):
+		self.cfg = get_cfg()
+		self.cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml"))
+		self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5 
+		self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
+		pass
+	def train(self):
+		pass
+	def predict(self, x: np.array) -> np.array:
+		predict_results = {
+			'xmin': [], 'ymin':[], 'xmax':[], 'ymax':[], 'confidence': [], 'name':[], 'image':[]
+		}
+		predictor = DefaultPredictor(self.cfg)
+		for image_path in tqdm(x):
+			img = cv2.imread(image_path)
+			outputs = predictor(img)
+			v = Visualizer(img[:, :, ::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
+			boxes = v._convert_boxes(outputs["instances"][outputs["instances"].pred_classes == 0].pred_boxes.to('cpu'))
+			for box in boxes:
+				file_name = image_path.split('/')[-1][0:-4]
+				predict_results["xmin"] += [box[0]]
+				predict_results["ymin"] += [box[1]]
+				predict_results["xmax"] += [box[2]]
+				predict_results["ymax"] += [box[3]]
+				predict_results["confidence"] += [0]
+				predict_results["name"] += [file_name]
+				predict_results["image"] += [image_path]
+		predict_results = pd.DataFrame(predict_results)
+		return predict_results
+
+
 obj_det_input = pipeline_input("obj_det", 
 	p_dataset_interpreter={
 		# 'KITTI_lemenko_interp':KITTI_lemenko_interp,
 		'karthika95-pedestrian-detection': obj_det_interp_1, 
 	}, 
 	p_model={
+		'obj_det_pipeline_model_frcnn':obj_det_pipeline_model_frcnn,
+		'obj_det_pipeline_model_yolov5n': obj_det_pipeline_model_yolov5n,
 		'obj_det_pipeline_model_yolov5n': obj_det_pipeline_model_yolov5n,
 		'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
 		'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
