@@ -1,1 +1,0 @@
-from .cifar10_demo import *
