@@ -16,12 +16,12 @@ def all_finished(processes):
 
 try:
 	process_list = [
-		'model_training', 
-		'model_analysis', 
-		'model_visualizer_loop', 
-		# 'ensemble_training',
-		# 'ensemble_analysis', 
-		# 'ensemble_visualizer_loop'
+		'model_utils/model_training', 
+		'model_utils/model_analysis', 
+		'model_utils/model_visualizer_loop', 
+		# 'ensemble_utils/ensemble_training',
+		# 'ensemble_utils/ensemble_analysis', 
+		# 'ensemble_utils/ensemble_visualizer_loop'
 	]
 	processes = {}
 

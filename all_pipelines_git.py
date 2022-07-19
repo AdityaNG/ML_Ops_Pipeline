@@ -16,19 +16,6 @@ global all_inputs, all_inputs_modules
 all_inputs = {}
 all_inputs_modules = {}
 
-# def git_clone(repo_url, output_dir):
-# 	git_clone_res = subprocess.check_output(['git', 'clone', repo_url, output_dir])
-# 	pass
-
-# def git_pull(working_dir):
-# 	git_pull_res = subprocess.check_output(['git', 'pull'], cwd=working_dir)
-# 	pass
-
-# def git_latest_commit(working_dir):
-# 	git_latest_commit_res = subprocess.check_output(['git', 'log', '-n', '1'], cwd=working_dir)
-# 	return git_latest_commit_res
-
-
 def get_all_inputs():
 	global all_inputs, all_inputs_modules
 
@@ -45,7 +32,9 @@ def get_all_inputs():
 		pipeline_name = pipeline_git.split('.git')[-2].split('/')[-1]
 		pipeline_dir = os.path.join(REMOTE_PIPELINES_DIR, pipeline_name)
 		if os.path.exists(pipeline_dir):
-			repo = git.Repo(pipeline_dir)	
+			repo = git.Repo(pipeline_dir)
+			repo.git.clean('-xdf')
+			repo.git.reset('--hard')
 		else:
 			print("Cloning repo: ", pipeline_git)
 			repo = git.Repo.clone_from(pipeline_git, pipeline_dir)

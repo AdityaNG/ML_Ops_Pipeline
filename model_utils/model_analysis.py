@@ -58,8 +58,6 @@ def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, mode
 		return (True, task_id, model_last_modified)
 	except Exception as ex:
 		tb = traceback.format_exc()
-	else:
-		tb = "OK"
 	finally:
 		print(tb)
 		err_txt = os.path.join(testing_dir, "err.txt")

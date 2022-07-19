@@ -22,8 +22,8 @@ from history import local_history
 
 import traceback
 
-from model_training import train_model
-from model_analysis import analyze_model
+from model_utils.model_training import train_model
+from model_utils.model_analysis import analyze_model
 # from model_visualizer_loop import vi
 
 def main(disable_torch_multiprocessing=False):
@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--single', action='store_true', help='Run the loop only once')
-	parser.add_argument('--disable-torch-multiprocessing', action='store_true', help='Run the loop only once')
+	parser.add_argument('--disable-torch-multiprocessing', action='store_true', help='Disable multiprocessing')
 	args = parser.parse_args()
 
 	if args.single:
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 		
 	while True:
 		try:
-			main()
+			main(disable_torch_multiprocessing=args.disable_torch_multiprocessing)
 			time.sleep(5)
 		except Exception as e:
 			traceback.print_exc()

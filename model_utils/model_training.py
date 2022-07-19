@@ -62,8 +62,6 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 	except Exception as ex:
 		print(ex)
 		tb = traceback.format_exc()
-	else:
-		tb = "OK"
 	finally:
 		print(tb)
 		err_txt = os.path.join(training_dir, "err.txt")
