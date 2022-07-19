@@ -95,6 +95,9 @@ def main(disable_torch_multiprocessing=False):
 		for (pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified) in pool_args:
 			status, task_id, model_last_modified = train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
 			status, task_id, model_last_modified = analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
+			
+			# status, task_id, model_last_modified = train_ens(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
+			# status, task_id, model_last_modified = analyze_ens(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
 			if status:
 				loc_hist[task_id] = model_last_modified
 	else:
