@@ -12,10 +12,67 @@ from datetime import datetime
 import json
 from typing import final
 
+from sklearn import pipeline
+
 from all_pipelines import get_all_inputs
 from pipeline_input import source_hash
-from constants import DATASET_DIR, MODEL_TESTING, MODEL_VISUAL, folder_last_modified
+from constants import DATASET_DIR, MODEL_TESTING, MODEL_TRAINING, MODEL_VISUAL, folder_last_modified
 from history import local_history
+
+def visualize_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, visualizers, visualizer_name):
+	print("-"*10)
+	print("model_name:\t",model_name)
+	print("interpreter_name:\t",interpreter_name)
+	print("dataset_dir:\t",dataset_dir)
+
+	try:
+		testing_dir = MODEL_TESTING.format(
+			pipeline_name=pipeline_name,
+			interpreter_name=interpreter_name,
+			model_name=model_name,
+			commit_id=model_last_modified
+		)
+		os.makedirs(testing_dir, exist_ok=True)
+		training_dir = MODEL_TRAINING.format(
+			pipeline_name=pipeline_name,
+			interpreter_name=interpreter_name,
+			model_name=model_name,
+			commit_id=model_last_modified
+		)
+		os.makedirs(training_dir, exist_ok=True)
+
+		results_pkl = os.path.join(testing_dir, "results.pkl")
+		predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+
+		results_handle = open(results_pkl, 'rb')
+		results = pickle.load(results_handle)
+		results_handle.close()
+
+		predictions_handle = open(predictions_pkl, 'rb')
+		predictions = pickle.load(predictions_handle)
+		predictions_handle.close()
+
+		visual_dir = MODEL_VISUAL.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name, visualizer_name=visualizer_name)
+		os.makedirs(visual_dir, exist_ok=True)
+
+		visual_files = glob.glob(os.path.join(visual_dir, "*"))
+		for vf in visual_files:
+			os.remove(vf)
+		os.makedirs(visual_dir, exist_ok=True)
+
+		print("-"*10)
+		print("model_name:\t",model_name)
+		print("interpreter_name:\t",interpreter_name)
+		print("dataset_dir:\t",dataset_dir)
+		print("visual_dir:\t",visual_dir)
+
+		visualizers[visualizer_name]().visualize(dat['test']['x'], dat['test']['y'], results, predictions, visual_dir)		
+
+		return (True, task_id, model_last_modified)
+	except Exception as ex:
+		print(ex)
+		traceback.print_exc()
+		return (False, task_id, model_last_modified)
 
 def main():
 	loc_hist = local_history(__file__)
@@ -45,7 +102,13 @@ def main():
 					for visualizer_name in visualizers:
 						visualizer_last_modified = str(source_hash(visualizers[visualizer_name]))
 
-						visual_dir = MODEL_VISUAL.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name, visualizer_name=visualizer_name)
+						visual_dir = MODEL_VISUAL.format(
+							pipeline_name=pipeline_name, 
+							interpreter_name=interpreter_name, 
+							model_name=model_name, 
+							visualizer_name=visualizer_name,
+							commit_id=visualizer_last_modified
+						)
 						visual_dir_last_modified = str(datetime.fromtimestamp(folder_last_modified(visual_dir)))
 
 						task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir + ":" + visualizer_name

@@ -19,7 +19,7 @@ MODEL_VISUAL = "data/{pipeline_name}/visuals/{model_name}/{commit_id}/{interpret
 
 HISTORY_PATH = "history/"
 
-REMOTE_PIPELINES_DIR = "remote_pipelines/"
+REMOTE_PIPELINES_DIR = "remote_pipelines"
 REMOTE_PIPELINES_TXT = "remote_pipelines.txt"
 
 def folder_last_modified(folder):

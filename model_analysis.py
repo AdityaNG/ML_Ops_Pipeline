@@ -24,21 +24,22 @@ def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, mode
 	print("model_name:\t",model_name)
 	print("interpreter_name:\t",interpreter_name)
 	print("dataset_dir:\t",dataset_dir)
-
+	testing_dir = MODEL_TESTING.format(
+		pipeline_name=pipeline_name,
+		interpreter_name=interpreter_name,
+		model_name=model_name,
+		commit_id=model_last_modified
+	)
+	os.makedirs(testing_dir, exist_ok=True)
+	training_dir = MODEL_TRAINING.format(
+		pipeline_name=pipeline_name,
+		interpreter_name=interpreter_name,
+		model_name=model_name,
+		commit_id=model_last_modified
+	)
+	os.makedirs(training_dir, exist_ok=True)
+	tb = "OK"
 	try:
-		testing_dir = MODEL_TESTING.format(
-			pipeline_name=pipeline_name,
-			interpreter_name=interpreter_name,
-			model_name=model_name
-		)
-		os.makedirs(testing_dir, exist_ok=True)
-		training_dir = MODEL_TRAINING.format(
-			pipeline_name=pipeline_name,
-			interpreter_name=interpreter_name,
-			model_name=model_name
-		)
-		os.makedirs(training_dir, exist_ok=True)
-
 		dat = interpreters[interpreter_name](dataset_dir).get_dataset()
 		mod = model_classes[model_name](training_dir)
 		#mod.predict(dat['test'])
@@ -56,8 +57,15 @@ def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, mode
 		predictions_handle.close()
 		return (True, task_id, model_last_modified)
 	except Exception as ex:
-		print(ex)
-		traceback.print_exc()
+		tb = traceback.format_exc()
+	else:
+		tb = "OK"
+	finally:
+		print(tb)
+		err_txt = os.path.join(testing_dir, "err.txt")
+		err_file = open(err_txt, "w")
+		err_file.write(tb)
+		err_file.close()
 		return (False, task_id, model_last_modified)
 
 def main():

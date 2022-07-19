@@ -94,7 +94,7 @@ def get_all_inputs():
 				if log:
 					print("Reloading:", p_name)
 			else:
-				pipeline = importlib.import_module("pipelines." + p_name)
+				pipeline = importlib.import_module(REMOTE_PIPELINES_DIR + "." + p_name)
 				if log:
 					print("Loading:", p_name)
 				
