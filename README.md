@@ -101,6 +101,11 @@ Run streamlit web UI
 streamlit run web_ui.py
 ```
 
+Run MLflow web UI
+```bash
+mlflow ui
+```
+
 # Code Quality
 Static Code Analysis
 ```bash
