@@ -88,8 +88,8 @@ def main(disable_torch_multiprocessing=False):
 						commit_id=model_last_modified
 					)
 					os.makedirs(training_dir, exist_ok=True)
-					
-					pool_args.append((pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified))
+					if loc_hist[task_id]!=model_last_modified:
+						pool_args.append((pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified))
 
 	if disable_torch_multiprocessing:
 		for (pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified) in pool_args:
@@ -106,9 +106,10 @@ def main(disable_torch_multiprocessing=False):
 			res1 = p.starmap(train_model, pool_args)
 			res2 = p.starmap(analyze_model, pool_args)
 			for status, task_id, model_last_modified in res2:
-				if status:
-					loc_hist[task_id] = model_last_modified
-					pass
+				loc_hist[task_id] = model_last_modified
+				# if status:
+				# 	loc_hist[task_id] = model_last_modified
+				# 	pass
 
 if __name__ == "__main__":
 	import argparse

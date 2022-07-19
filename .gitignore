@@ -168,3 +168,5 @@ history/
 
 *.pkl
 remote_pipelines/
+
+mlruns/
