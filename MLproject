@@ -6,3 +6,7 @@ entry_points:
   main:
     command: "python3 data_ingestion.py --input_dir ~/Downloads/karthika95-pedestrian-detection/ --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection"
   
+  train:
+    command : "python3 model_training.py --single"
+  predict:
+    command : "python model_analysis.py --single"
