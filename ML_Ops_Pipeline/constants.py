@@ -1,26 +1,28 @@
 import os
 
-DATA_BASE_DIR = "data/"
-RAW_DATASET_DIR = "data/{pipeline_name}/raw_datasets/"
-DATASET_DIR = "data/{pipeline_name}/datasets/"
-LOG_DIR = "logs/"
+PIPELINE_HOME = os.path.join(os.path.expanduser('~'), ".ML_Ops_Pipeline")
+
+DATA_BASE_DIR = os.path.join(PIPELINE_HOME, "data/")
+RAW_DATASET_DIR = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/raw_datasets/")
+DATASET_DIR = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/datasets/")
+LOG_DIR = os.path.join(PIPELINE_HOME, "logs/")
 #MODEL_TRAINING_SETTINGS = "data/{pipeline_name}/model_training_settings.pkl"
 #MODEL_VALIDATION_SETTINGS = "data/{pipeline_name}/model_validation_settings.pkl"
 
-MODEL_BASE = "data/{pipeline_name}/models/"
-MODEL_TRAINING = "data/{pipeline_name}/models/{model_name}/{commit_id}/training/{interpreter_name}"
-MODEL_TESTING = "data/{pipeline_name}/models/{model_name}/{commit_id}/testing/{interpreter_name}"
-MODEL_VISUAL = "data/{pipeline_name}/visuals/{model_name}/{commit_id}/{interpreter_name}/{visualizer_name}/" 
+MODEL_BASE = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/models/")
+MODEL_TRAINING = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/models/{model_name}/{commit_id}/training/{interpreter_name}")
+MODEL_TESTING = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/models/{model_name}/{commit_id}/testing/{interpreter_name}")
+MODEL_VISUAL = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/visuals/{model_name}/{commit_id}/{interpreter_name}/{visualizer_name}/")
 
-# ENSEMBLE_BASE = "data/{pipeline_name}/ensemblers/"
-# ENSEMBLE_TRAINING = "data/{pipeline_name}/ensemblers/{ensembler_name}/{commit_id}/training/{interpreter_name}"
-# ENSEMBLE_TESTING = "data/{pipeline_name}/ensemblers/{ensembler_name}/{commit_id}/testing/{interpreter_name}"
-# ENSEMBLE_VISUAL = "data/{pipeline_name}/visuals/{visualizer_name}/{commit_id}/ensemblers/{ensembler_name}/interpreter/{interpreter_name}"
+ENSEMBLE_BASE = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/ensembles/")
+ENSEMBLE_TRAINING = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/ensembles/{ensemble_name}/{commit_id}/training/{interpreter_name}")
+ENSEMBLE_TESTING = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/ensembles/{ensemble_name}/{commit_id}/testing/{interpreter_name}")
+ENSEMBLE_VISUAL = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/visuals/{ensemble_name}/{commit_id}/{interpreter_name}/{visualizer_name}/")
 
-HISTORY_PATH = "history/"
+HISTORY_PATH = os.path.join(PIPELINE_HOME, "history")
 
-REMOTE_PIPELINES_DIR = "remote_pipelines"
-REMOTE_PIPELINES_TXT = "remote_pipelines.txt"
+REMOTE_PIPELINES_DIR = os.path.join(PIPELINE_HOME, "remote_pipelines")
+REMOTE_PIPELINES_TXT = os.path.join(PIPELINE_HOME, "remote_pipelines.txt")
 
 def folder_last_modified(folder):
 	last_modified = []
@@ -34,6 +36,7 @@ def folder_last_modified(folder):
 
 def generate_tree():
 	from all_pipelines import get_all_inputs
+	os.makedirs(PIPELINE_HOME)
 	all_inputs = get_all_inputs()
 	for pipeline_name in all_inputs:
 		raw_dataset_dir = RAW_DATASET_DIR.format(pipeline_name=pipeline_name)
@@ -56,15 +59,15 @@ def generate_tree():
 				print(testing_dir)
 				print('\t',model_name, models[model_name])
 
-			ensemblers = all_inputs[pipeline_name].get_pipeline_ensembler()
-			for ensembler_name in ensemblers:
-				training_dir = ENSEMBLE_TRAINING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
-				os.makedirs(training_dir, exist_ok=True)
-				print(training_dir)
-				testing_dir = ENSEMBLE_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
-				os.makedirs(testing_dir, exist_ok=True)
-				print(testing_dir)
-				print('\t',ensembler_name, ensemblers[ensembler_name])
+			# ensemblers = all_inputs[pipeline_name].get_pipeline_ensembler()
+			# for ensembler_name in ensemblers:
+			# 	training_dir = ENSEMBLE_TRAINING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
+			# 	os.makedirs(training_dir, exist_ok=True)
+			# 	print(training_dir)
+			# 	testing_dir = ENSEMBLE_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
+			# 	os.makedirs(testing_dir, exist_ok=True)
+			# 	print(testing_dir)
+			# 	print('\t',ensembler_name, ensemblers[ensembler_name])
 
 if __name__=="__main__":
 	generate_tree()

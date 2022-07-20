@@ -6,7 +6,7 @@ from .constants import HISTORY_PATH
 class local_history(dict):
 
 	def __init__(self, name) -> None:
-		self.name = name
+		self.name = name.split("/")[-1]
 		os.makedirs(HISTORY_PATH, exist_ok=True)
 		self.local_history_pkl = os.path.join(HISTORY_PATH, self.name + ".pkl")
 		self.load()

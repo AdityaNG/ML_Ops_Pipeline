@@ -17,13 +17,16 @@ import json
 
 from .all_pipelines_git import get_all_inputs
 from .pipeline_input import source_hash
-from .constants import DATASET_DIR, MODEL_TRAINING
+from .constants import DATASET_DIR, ENSEMBLE_TRAINING, MODEL_TRAINING
 from .history import local_history
 
 import traceback
 
 from .model_utils.model_training import train_model
 from .model_utils.model_analysis import analyze_model
+
+from .ensemble_utils.ensemble_training import train_ensemble
+from .ensemble_utils.ensemble_analysis import analyze_ensemble
 # from model_visualizer_loop import vi
 
 def main(disable_torch_multiprocessing=False):
@@ -56,7 +59,7 @@ def main(disable_torch_multiprocessing=False):
 						task_list[pipeline_name][interpreter_name][dataset_dir].setdefault(model_name, (task_id, model_last_modified))
 
 	if task_list == {}:
-		#print("Waiting for new tasks...")
+		print("Waiting for new tasks...")
 		return
 
 	print("-"*10)
@@ -64,6 +67,7 @@ def main(disable_torch_multiprocessing=False):
 	print("-"*10)
 
 	pool_args = []
+	pool_args_ensemble = []
 
 	for pipeline_name in task_list:
 		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
@@ -88,18 +92,37 @@ def main(disable_torch_multiprocessing=False):
 						commit_id=model_last_modified
 					)
 					os.makedirs(training_dir, exist_ok=True)
-					if loc_hist[task_id]!=model_last_modified:
+					if loc_hist[task_id] != model_last_modified:
 						pool_args.append((pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified))
+				
+				ensemble_classes = all_inputs[pipeline_name]['pipeline'].get_pipeline_ensembler
+				for ensemble_name in ensemble_classes:
+					print("-"*10)
+					print("ensemble_name:\t",ensemble_name)
+					print("interpreter_name:\t",interpreter_name)
+					print("dataset_dir:\t",dataset_dir)
+					task_id, model_last_modified = task_list[pipeline_name][interpreter_name][dataset_dir][model_name]
+					task_id += ":" + ensemble_name
+					ensemble_training_dir = ENSEMBLE_TRAINING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						model_name=model_name,
+						commit_id=model_last_modified
+					)
+					os.makedirs(ensemble_training_dir, exist_ok=True)
+					if loc_hist[task_id] != model_last_modified:
+						pool_args_ensemble.append((pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes))
 
 	if disable_torch_multiprocessing:
 		for (pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified) in pool_args:
 			status, task_id, model_last_modified = train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
 			status, task_id, model_last_modified = analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
-			
-			# status, task_id, model_last_modified = train_ens(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
-			# status, task_id, model_last_modified = analyze_ens(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
-			if status:
-				loc_hist[task_id] = model_last_modified
+			loc_hist[task_id] = model_last_modified
+
+		for (pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes) in pool_args_ensemble:
+			status, task_id, model_last_modified = train_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes)
+			status, task_id, model_last_modified = analyze_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes)
+			loc_hist[task_id] = model_last_modified
 	else:
 		with torch.multiprocessing.Pool(torch.multiprocessing.cpu_count()) as p:
 		#with torch.multiprocessing.Pool(1) as p:
@@ -107,9 +130,13 @@ def main(disable_torch_multiprocessing=False):
 			res2 = p.starmap(analyze_model, pool_args)
 			for status, task_id, model_last_modified in res2:
 				loc_hist[task_id] = model_last_modified
-				# if status:
-				# 	loc_hist[task_id] = model_last_modified
-				# 	pass
+
+			res1 = p.starmap(train_model, pool_args_ensemble)
+			res2 = p.starmap(analyze_model, pool_args_ensemble)
+			for status, task_id, model_last_modified in res2:
+				loc_hist[task_id] = model_last_modified
+		
+		
 
 if __name__ == "__main__":
 	import argparse
