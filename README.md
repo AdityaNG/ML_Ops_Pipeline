@@ -1,5 +1,9 @@
 # Toy ML Ops Pipeline
 
+![pylint workflow](https://github.com/kora-Scenes/ML_Ops_Pipeline/actions/workflows/pylint.yml/badge.svg)
+![pypi workflow](https://github.com/kora-Scenes/ML_Ops_Pipeline/actions/workflows/pypi.yml/badge.svg)
+![pytest workflow](https://github.com/kora-Scenes/ML_Ops_Pipeline/actions/workflows/pytest.yml/badge.svg)
+
 <img width="70%" src="imgs/demo.gif" />
 
 A simple demonstration of an ML Ops pipeline involving three stages:
