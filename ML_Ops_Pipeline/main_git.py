@@ -15,15 +15,15 @@ from datetime import datetime
 
 import json
 
-from all_pipelines_git import get_all_inputs
-from pipeline_input import source_hash
-from constants import DATASET_DIR, MODEL_TRAINING
-from history import local_history
+from .all_pipelines_git import get_all_inputs
+from .pipeline_input import source_hash
+from .constants import DATASET_DIR, MODEL_TRAINING
+from .history import local_history
 
 import traceback
 
-from model_utils.model_training import train_model
-from model_utils.model_analysis import analyze_model
+from .model_utils.model_training import train_model
+from .model_utils.model_analysis import analyze_model
 # from model_visualizer_loop import vi
 
 def main(disable_torch_multiprocessing=False):

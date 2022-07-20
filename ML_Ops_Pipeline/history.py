@@ -1,7 +1,7 @@
 import os
 import pickle
 from datetime import datetime
-from constants import HISTORY_PATH
+from .constants import HISTORY_PATH
 
 class local_history(dict):
 

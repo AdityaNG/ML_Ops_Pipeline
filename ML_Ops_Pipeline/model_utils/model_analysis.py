@@ -12,10 +12,10 @@ import sys
 
 import json
 
-from all_pipelines import get_all_inputs
-from pipeline_input import source_hash
-from constants import DATASET_DIR, MODEL_TESTING, MODEL_TRAINING, folder_last_modified
-from history import local_history
+from ..all_pipelines import get_all_inputs
+from ..pipeline_input import source_hash
+from ..constants import DATASET_DIR, MODEL_TESTING, MODEL_TRAINING, folder_last_modified
+from ..history import local_history
 
 import traceback
 

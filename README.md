@@ -110,5 +110,8 @@ python -m pycodestyle *.py
 
 # Unit Testing
 
-TODO
+Run the unit tests
+```bash
+python -m pytest --import-mode=append tests/
+```
 

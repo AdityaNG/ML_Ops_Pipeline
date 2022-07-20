@@ -4,9 +4,13 @@ import importlib
 import traceback
 import glob
 
-from constants import REMOTE_PIPELINES_DIR, REMOTE_PIPELINES_TXT
+import sys
+
+from .constants import REMOTE_PIPELINES_DIR, REMOTE_PIPELINES_TXT
 
 import git
+
+sys.path.append(REMOTE_PIPELINES_DIR)
 
 log = False
 if __name__=="__main__":
@@ -83,7 +87,9 @@ def get_all_inputs():
 				if log:
 					print("Reloading:", p_name)
 			else:
-				pipeline = importlib.import_module(REMOTE_PIPELINES_DIR + "." + p_name)
+				#REMOTE_PIPELINES_DIR_NAME = REMOTE_PIPELINES_DIR.split("/")[-1]
+				#pipeline = importlib.import_module(REMOTE_PIPELINES_DIR_NAME + "." + p_name)
+				pipeline = importlib.import_module(p_name)
 				if log:
 					print("Loading:", p_name)
 				
