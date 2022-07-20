@@ -1,0 +1,4 @@
+https://github.com/Kora-Scenes/cifar10_demo.git
+https://github.com/Kora-Scenes/depth_det.git
+https://github.com/Kora-Scenes/obj_det.git
+https://github.com/Kora-Scenes/seg.git
