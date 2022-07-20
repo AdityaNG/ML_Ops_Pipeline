@@ -462,18 +462,18 @@ class obj_det_evaluator:
 			# mlflow.log_metric("confusion", yolo_metrics)
 			# mlflow.log_metric(str(key),value)
 
-			tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
+			# tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
 
-			# Model registry does not work with file store
-			if tracking_url_type_store != "file":
+			# # Model registry does not work with file store
+			# if tracking_url_type_store != "file":
 
-				# Register the model
-				# There are other ways to use the Model Registry, which depends on the use case,
-				# please refer to the doc for more information:
-				# https://mlflow.org/docs/latest/model-registry.html#api-workflow
-				mlflow.sklearn.log_model(self.model, "model", registered_model_name="ElasticnetWineModel")
-			else:
-				mlflow.sklearn.log_model(self.model, "model")
+			# 	# Register the model
+			# 	# There are other ways to use the Model Registry, which depends on the use case,
+			# 	# please refer to the doc for more information:
+			# 	# https://mlflow.org/docs/latest/model-registry.html#api-workflow
+			# 	mlflow.sklearn.log_model(self.model, "model", registered_model_name="ElasticnetWineModel")
+			# else:
+			# 	mlflow.sklearn.log_model(self.model, "model")
 
 		print(results)
 		preds1 = preds
@@ -694,13 +694,13 @@ obj_det_input = pipeline_input("obj_det",
 		'karthika95-pedestrian-detection': obj_det_interp_1, 
 	}, 
 	p_model={
-		'obj_det_pipeline_model_yolov3': obj_det_pipeline_model_yolov3,
-		'obj_det_pipeline_model_frcnn':obj_det_pipeline_model_frcnn,
+		# 'obj_det_pipeline_model_yolov3': obj_det_pipeline_model_yolov3,
+		# 'obj_det_pipeline_model_frcnn':obj_det_pipeline_model_frcnn,
 		'obj_det_pipeline_model_yolov5n': obj_det_pipeline_model_yolov5n,
-		'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
-		'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
-		'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
-		'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
+		# 'obj_det_pipeline_model_yolov5s': obj_det_pipeline_model_yolov5s,
+		# 'obj_det_pipeline_model_yolov5m': obj_det_pipeline_model_yolov5m,
+		# 'obj_det_pipeline_model_yolov5l': obj_det_pipeline_model_yolov5l,
+		# 'obj_det_pipeline_model_yolov5x': obj_det_pipeline_model_yolov5x,
 	}, 
 	p_ensembler={
 		'obj_det_pipeline_ensembler_1': obj_det_pipeline_ensembler_1
