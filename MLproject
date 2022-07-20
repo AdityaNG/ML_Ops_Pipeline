@@ -4,5 +4,5 @@ conda_env: conda.yaml
 
 entry_points:
   main:
-    command: "python3 data_ingestion.py --input_dir ~/Downloads/karthika95-pedestrian-detection/ --pipeline_name  --interpreter_name karthika95-pedestrian-detection"
+    command: "python3 data_ingestion.py --input_dir ~/Downloads/karthika95-pedestrian-detection/ --pipeline_name obj_det --interpreter_name karthika95-pedestrian-detection"
   
