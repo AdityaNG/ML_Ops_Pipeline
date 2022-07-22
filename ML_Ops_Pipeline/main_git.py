@@ -47,7 +47,7 @@ def main(disable_torch_multiprocessing=False):
 					
 					model_file_path = inspect.getfile(model_classes[model_name])
 					#model_last_modified = str(datetime.fromtimestamp(os.path.getmtime(model_file_path)))
-					#model_last_modified = str(source_hash(model_classes[model_name]))
+					#model_last_source_hash = str(source_hash(model_classes[model_name]))
 					git_data = all_inputs[pipeline_name]['git_data']
 					model_last_modified = git_data.hexsha
 					task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir
@@ -115,14 +115,16 @@ def main(disable_torch_multiprocessing=False):
 
 	if disable_torch_multiprocessing:
 		for (pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified) in pool_args:
-			status, task_id1, model_last_modified = train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
-			status, task_id2, model_last_modified = analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
+			visualizers = all_inputs[pipeline_name]['pipeline'].get_pipeline_visualizer()
+			status, task_id1, model_last_modified = train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, visualizers)
+			status, task_id2, model_last_modified = analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, visualizers)
 			loc_hist[task_id1] = model_last_modified
 			loc_hist[task_id2] = model_last_modified
 
 		for (pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes) in pool_args_ensemble:
-			status, task_id1, model_last_modified = train_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes)
-			status, task_id2, model_last_modified = analyze_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes)
+			visualizers = all_inputs[pipeline_name]['pipeline'].get_pipeline_visualizer()
+			status, task_id1, model_last_modified = train_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes, visualizers)
+			status, task_id2, model_last_modified = analyze_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, ensemble_classes, visualizers)
 			loc_hist[task_id1] = model_last_modified
 			loc_hist[task_id2] = model_last_modified
 	else:

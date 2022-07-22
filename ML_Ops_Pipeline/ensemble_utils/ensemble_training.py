@@ -19,15 +19,17 @@ from datetime import datetime
 #import multiprocessing
 
 import json
+import mlflow
 
 from ..all_pipelines import get_all_inputs
 from ..pipeline_input import source_hash
 from ..constants import DATASET_DIR, ENSEMBLE_TRAINING, MODEL_TESTING
 from ..history import local_history
+from .ensemble_visualizer_loop import vizualize_ensemble
 
 import traceback
 
-def train_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, ensemble_classes):
+def train_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, ensemble_classes, visualizers):
 	print("-"*10)
 	print("ensemble_name:\t",ensemble_name)
 	print("interpreter_name:\t",interpreter_name)
@@ -40,57 +42,71 @@ def train_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, 
 	)
 	os.makedirs(training_dir, exist_ok=True)
 	tb = "OK"
-	try:
-		model_predictions = {}
-		for model_name in model_classes:
+	with mlflow.start_run(description=training_dir, run_name=model_name):
+		try:
+			model_predictions = {}
+			for model_name in model_classes:
 
-			testing_dir = MODEL_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
-			os.makedirs(testing_dir, exist_ok=True)
-			results_pkl = os.path.join(testing_dir, "results.pkl")
-			predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
-				
-			results_handle = open(results_pkl, 'rb')
-			results = pickle.load(results_handle)
-			results_handle.close()
-			predictions_handle = open(predictions_pkl, 'rb')
-			predictions = pickle.load(predictions_handle)
-			predictions_handle.close()
+				testing_dir = MODEL_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
+				os.makedirs(testing_dir, exist_ok=True)
+				results_pkl = os.path.join(testing_dir, "results.pkl")
+				predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
 					
-			model_predictions[model_name] = predictions
+				results_handle = open(results_pkl, 'rb')
+				results = pickle.load(results_handle)
+				results_handle.close()
+				predictions_handle = open(predictions_pkl, 'rb')
+				predictions = pickle.load(predictions_handle)
+				predictions_handle.close()
+						
+				model_predictions[model_name] = predictions
 
-		dat = interpreters[interpreter_name](dataset_dir).get_dataset()
-		mod = ensemble_classes[ensemble_name](training_dir)
-		#mod.predict(dat['train'])
-		results, predictions = mod.train(dat['train']['x'], dat['train']['y'])
-		#print(results)
+			dat = interpreters[interpreter_name](dataset_dir).get_dataset()
+			mod = ensemble_classes[ensemble_name](training_dir)
+			#mod.predict(dat['train'])
+			results, predictions = mod.train(dat['train']['x'], dat['train']['y'])
+			#print(results)
 
-		results_pkl = os.path.join(training_dir, "results.pkl")
-		predictions_pkl = os.path.join(training_dir, "predictions.pkl")
-		ensemble_pkl = os.path.join(training_dir, "ensemble.pkl")
+			results_pkl = os.path.join(training_dir, "results.pkl")
+			predictions_pkl = os.path.join(training_dir, "predictions.pkl")
+			predictions_csv = os.path.join(training_dir, "predictions.csv")
+			ensemble_pkl = os.path.join(training_dir, "ensemble.pkl")
 
-		results_handle = open(results_pkl, 'wb')
-		pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
-		results_handle.close()
+			results_handle = open(results_pkl, 'wb')
+			pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			results_handle.close()
 
-		predictions_handle = open(predictions_pkl, 'wb')
-		pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
-		predictions_handle.close()
+			predictions_handle = open(predictions_pkl, 'wb')
+			pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			predictions_handle.close()
 
-		ensemble_handle = open(ensemble_pkl, 'wb')
-		pickle.dump(mod, ensemble_handle, protocol=pickle.HIGHEST_PROTOCOL)
-		ensemble_handle.close()
+			ensemble_handle = open(ensemble_pkl, 'wb')
+			pickle.dump(mod, ensemble_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			ensemble_handle.close()
 
-		return (True, task_id, ensemble_last_modified)
-	except Exception as ex:
-		print(ex)
-		tb = traceback.format_exc()
-	finally:
-		print(tb)
-		err_txt = os.path.join(training_dir, "err.txt")
-		err_file = open(err_txt, "w")
-		err_file.write(tb)
-		err_file.close()
-		return (False, task_id, ensemble_last_modified)
+			predictions.to_csv(predictions_csv)
+
+			for key in results:
+				mlflow.log_metric(key, results[key])
+			#mlflow.log_dict(predictions)
+
+			for visualizer_name in visualizers:
+				stat, task_id, model_last_modified, visual_dir = vizualize_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, task_id, model_last_modified, visualizers, visualizer_name, dat, 'train')
+				mlflow.log_artifacts(visual_dir)
+
+			return (True, task_id, ensemble_last_modified)
+		except Exception as ex:
+			if isinstance(ex, KeyboardInterrupt): exit()
+			print(ex)
+			tb = traceback.format_exc()
+			mlflow.set_tag("LOG_STATUS", "FAILED")
+		finally:
+			print(tb)
+			err_txt = os.path.join(training_dir, "err.txt")
+			err_file = open(err_txt, "w")
+			err_file.write(tb)
+			err_file.close()
+			return (False, task_id, ensemble_last_modified)
 
 def main():
 	loc_hist = local_history(__file__)

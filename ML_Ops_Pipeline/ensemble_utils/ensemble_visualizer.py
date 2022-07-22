@@ -1,120 +1,224 @@
 """
-Ensemble visualiser
+ensemble_analysis
 """
-from distutils.dir_util import copy_tree
-import traceback
-import os
-import pickle
-import datetime
+
 import glob
+import pickle
+import os
+import time
+import inspect
+from datetime import datetime
+import traceback
 
-from constants import DATASET_DIR, ENSEMBLE_TESTING, MODEL_TESTING, DATA_BASE_DIR, MODEL_BASE, ENSEMBLE_VISUAL
-from pipeline_input import pipeline_input
+import json
+from typing import final
 
-def vizualize_ensemble(p_input: pipeline_input, interpreter_name: str, dataset_name: str, ensemble_name: str, visualizer_name: str):
-	assert isinstance(p_input, pipeline_input)
-	pipeline_name = p_input.get_pipeline_name()
-	all_dataset_interpreters = p_input.get_pipeline_dataset_interpreter()
-	if interpreter_name not in all_dataset_interpreters.keys() or interpreter_name=='':
-		print("Interpreter does not exist")
-		print("List of available interpreters for pipeline=", pipeline_name)
-		print("\n".join(all_dataset_interpreters.keys()))
-		return
-	
-	dataset_interp = p_input.get_pipeline_dataset_interpreter_by_name(interpreter_name)
-	all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
-		
-	interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
-	dataset_dir = os.path.join(interpreter_dataset_dir, dataset_name)
-	print(dataset_dir)
-	if not os.path.exists(dataset_dir) or dataset_name=='':
-		print("Dataset does not exist")
-		print("List of available datasets for interpreter=", interpreter_name)
-		print("\n".join(os.listdir(interpreter_dataset_dir)))
-		return
-	
-	dat = dataset_interp(dataset_dir).get_dataset()
+from sklearn import pipeline
 
-	model_classes = p_input.get_pipeline_model()
-	model_predictions = {}
-	for model_name in model_classes:
-		mod_testing_dir = MODEL_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
-		os.makedirs(mod_testing_dir, exist_ok=True)
-		results_pkl = os.path.join(mod_testing_dir, "results.pkl")
-		predictions_pkl = os.path.join(mod_testing_dir, "predictions.pkl")
+from ..all_pipelines_git import get_all_inputs
+from ..pipeline_input import source_hash
+from ..constants import DATASET_DIR, ENSEMBLE_TESTING, ENSEMBLE_TRAINING, ENSEMBLE_VISUAL, folder_last_modified
+from ..history import local_history
+
+def visualize_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, task_id, ensemble_last_modified, visualizers, visualizer_name, dat, mode):
+	print("-"*10)
+	print("ensemble_name:\t",ensemble_name)
+	print("interpreter_name:\t",interpreter_name)
+	print("dataset_dir:\t",dataset_dir)
+
+	try:
+		testing_dir = ENSEMBLE_TESTING.format(
+			pipeline_name=pipeline_name,
+			interpreter_name=interpreter_name,
+			ensemble_name=ensemble_name,
+			commit_id=ensemble_last_modified
+		)
+		os.makedirs(testing_dir, exist_ok=True)
+		training_dir = ENSEMBLE_TRAINING.format(
+			pipeline_name=pipeline_name,
+			interpreter_name=interpreter_name,
+			ensemble_name=ensemble_name,
+			commit_id=ensemble_last_modified
+		)
+		os.makedirs(training_dir, exist_ok=True)
+
+		if mode=='train':
+			results_pkl = os.path.join(training_dir, "results.pkl")
+			predictions_pkl = os.path.join(training_dir, "predictions.pkl")
+		elif mode=='test':
+			results_pkl = os.path.join(testing_dir, "results.pkl")
+			predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+		else:
+			raise Exception("Mode must be test or train")
+
 		results_handle = open(results_pkl, 'rb')
 		results = pickle.load(results_handle)
 		results_handle.close()
+
 		predictions_handle = open(predictions_pkl, 'rb')
 		predictions = pickle.load(predictions_handle)
 		predictions_handle.close()
-		model_predictions[model_name] = predictions
 
-	ens_testing_dir = ENSEMBLE_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensemble_name)
-	ensemble_classes = p_input.get_pipeline_ensembler()
-	if not os.path.exists(ens_testing_dir) or ensemble_name=='' or ensemble_name not in ensemble_classes:
-		print("Ensemble does not exist")
-		print("List of available Ensemble models for pipeline=", pipeline_name)
-		#print("\n".join(os.listdir(MODEL_BASE.format(pipeline_name=pipeline_name))))
-		print("\n".join(ensemble_classes.keys()))
+		visual_dir = ENSEMBLE_VISUAL.format(
+			pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensemble_name=ensemble_name, visualizer_name=visualizer_name,
+			commit_id=ensemble_last_modified
+		)
+		os.makedirs(visual_dir, exist_ok=True)
+
+		visual_files = glob.glob(os.path.join(visual_dir, "*"))
+		for vf in visual_files:
+			os.remove(vf)
+		os.makedirs(visual_dir, exist_ok=True)
+
+		print("-"*10)
+		print("ensemble_name:\t",ensemble_name)
+		print("interpreter_name:\t",interpreter_name)
+		print("dataset_dir:\t",dataset_dir)
+		print("visual_dir:\t",visual_dir)
+
+		visualizers[visualizer_name]().visualize(dat[mode]['x'], dat[mode]['y'], results, predictions, visual_dir)
+
+		return (True, task_id, ensemble_last_modified, visual_dir)
+	except Exception as ex:
+		if isinstance(ex, KeyboardInterrupt): exit()
+		print(ex)
+		traceback.print_exc()
+		return (False, task_id, ensemble_last_modified)
+
+def main():
+	loc_hist = local_history(__file__)
+	task_list = {}
+	all_inputs = get_all_inputs()
+
+	for pipeline_name in all_inputs:
+		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
+		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
+		for interpreter_name in interpreters:
+			interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
+			interpreter_datasets = glob.glob(os.path.join(interpreter_dataset_dir,"*"))
+			for dataset_dir in interpreter_datasets:
+				
+				ensemble_classes = all_inputs[pipeline_name].get_pipeline_ensemble()
+				for ensemble_name in ensemble_classes:
+
+					testing_dir = ENSEMBLE_TESTING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						ensemble_name=ensemble_name
+					)
+					
+					ensemble_results_last_modified = str(datetime.fromtimestamp(folder_last_modified(testing_dir)))
+
+					visualizers = all_inputs[pipeline_name].get_pipeline_visualizer()
+					for visualizer_name in visualizers:
+						visualizer_last_modified = str(source_hash(visualizers[visualizer_name]))
+
+						visual_dir = ENSEMBLE_VISUAL.format(
+							pipeline_name=pipeline_name, 
+							interpreter_name=interpreter_name, 
+							ensemble_name=ensemble_name, 
+							visualizer_name=visualizer_name,
+							commit_id=visualizer_last_modified
+						)
+						visual_dir_last_modified = str(datetime.fromtimestamp(folder_last_modified(visual_dir)))
+
+						task_id = ensemble_name + ":"+ interpreter_name + ":" + dataset_dir + ":" + visualizer_name
+						task_last_modified = ensemble_results_last_modified + visualizer_last_modified
+
+						if loc_hist[task_id] != task_last_modified+visual_dir_last_modified:
+							task_list.setdefault(pipeline_name, {})
+							task_list[pipeline_name].setdefault(interpreter_name, {})
+							task_list[pipeline_name][interpreter_name].setdefault(dataset_dir, {})
+							task_list[pipeline_name][interpreter_name][dataset_dir].setdefault(ensemble_name, {})
+							task_list[pipeline_name][interpreter_name][dataset_dir][ensemble_name].setdefault(visualizer_name, (task_id, task_last_modified, visual_dir_last_modified))
+
+	if task_list == {}:
+		#print("Waiting for new tasks...")
 		return
-
-	ens_results_pkl = os.path.join(ens_testing_dir, "results.pkl")
-	ens_predictions_pkl = os.path.join(ens_testing_dir, "predictions.pkl")
-
-	if not os.path.exists(results_pkl) or not os.path.exists(predictions_pkl):
-		print("Analysis data for the given combination has not been generated yet")
-		return
-
-	visualizer_classes = p_input.get_pipeline_visualizer()
-	if visualizer_name=='' or visualizer_name not in visualizer_classes:
-		print("Vizualizer does not exist")
-		print("List of available Ensemble Vizualizer for pipeline=", pipeline_name)
-		print("\n".join(visualizer_classes.keys()))
-		return
-	visualizer = p_input.get_pipeline_visualizer_by_name(visualizer_name)()
-
-	ens_results_handle = open(ens_results_pkl, 'rb')
-	ens_results = pickle.load(ens_results_handle)
-	ens_results_handle.close()
-
-	ens_predictions_handle = open(ens_predictions_pkl, 'rb')
-	ens_predictions = pickle.load(ens_predictions_handle)
-	ens_predictions_handle.close()
-
-	visual_dir = ENSEMBLE_VISUAL.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensemble_name)
-	os.makedirs(visual_dir, exist_ok=True)
-
-	visual_files = glob.glob(os.path.join(visual_dir, "*"))
-	for vf in visual_files:
-		os.remove(vf)
 
 	print("-"*10)
-	print("ensemble_classes:\t",ensemble_classes)
-	print("interpreter_name:\t",interpreter_name)
-	print("dataset_dir:\t",dataset_dir)
-	print("visual_dir:\t",visual_dir)
+	print("Task list:\n", json.dumps(task_list, sort_keys=True, indent=4))
+	print("-"*10)
 
-	print(results)
-	print(predictions)
+	for pipeline_name in task_list:
+		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
+		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
+		for interpreter_name in task_list[pipeline_name].keys():
+			interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
+			interpreter_datasets = task_list[pipeline_name][interpreter_name].keys()
+			for dataset_dir in interpreter_datasets:
+				
+				dat = interpreters[interpreter_name](dataset_dir).get_dataset()
+				ensemble_classes = all_inputs[pipeline_name].get_pipeline_ensemble()
+				for ensemble_name in task_list[pipeline_name][interpreter_name][dataset_dir].keys():
+					print("-"*10)
+					print("ensemble_name:\t",ensemble_name)
+					print("interpreter_name:\t",interpreter_name)
+					print("dataset_dir:\t",dataset_dir)
+					testing_dir = ENSEMBLE_TESTING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						ensemble_name=ensemble_name
+					)
+					os.makedirs(testing_dir, exist_ok=True)
+					dataset_name = dataset_dir.split("/")[-1]
+					#visualizers = list(all_inputs[pipeline_name].get_pipeline_visualizer().keys())
+					visualizers = all_inputs[pipeline_name].get_pipeline_visualizer()
+					for visualizer_name in task_list[pipeline_name][interpreter_name][dataset_dir][ensemble_name].keys():
+						results_pkl = os.path.join(testing_dir, "results.pkl")
+						predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
 
-	visualizer.visualize(dat['test']['x'], dat['test']['y'], ens_predictions, visual_dir)
+						results_handle = open(results_pkl, 'rb')
+						results = pickle.load(results_handle)
+						results_handle.close()
 
-if __name__=="__main__":
-	from all_pipelines import get_all_inputs
+						predictions_handle = open(predictions_pkl, 'rb')
+						predictions = pickle.load(predictions_handle)
+						predictions_handle.close()
+
+						visual_dir = ENSEMBLE_VISUAL.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensemble_name=ensemble_name, visualizer_name=visualizer_name)
+						os.makedirs(visual_dir, exist_ok=True)
+
+						visual_files = glob.glob(os.path.join(visual_dir, "*"))
+						for vf in visual_files:
+							os.remove(vf)
+						os.makedirs(visual_dir, exist_ok=True)
+
+						print("-"*10)
+						print("ensemble_name:\t",ensemble_name)
+						print("interpreter_name:\t",interpreter_name)
+						print("dataset_dir:\t",dataset_dir)
+						print("visual_dir:\t",visual_dir)
+
+						try:
+							visualizers[visualizer_name]().visualize(dat['test']['x'], dat['test']['y'], results, predictions, visual_dir)
+						except Exception as ex:
+							if isinstance(ex, KeyboardInterrupt): exit()
+							print(ex)
+							traceback.print_exc()
+						finally:
+							visual_dir_last_modified = str(datetime.fromtimestamp(folder_last_modified(visual_dir)))
+							task_id, task_last_modified, visual_dir_last_modified_old = task_list[pipeline_name][interpreter_name][dataset_dir][ensemble_name][visualizer_name]
+							loc_hist[task_id] = task_last_modified + visual_dir_last_modified
+
+
+if __name__ == "__main__":
+	import traceback
 	import argparse
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--pipeline_name', type=str, default='')
-	parser.add_argument('--interpreter_name', type=str, default='')
-	parser.add_argument('--dataset_name', type=str, default='')
-	parser.add_argument('--ensemble_name', type=str, default='')
-	parser.add_argument('--visualizer_name', type=str, default='')
+	parser.add_argument('--single', action='store_true', help='Run the loop only once')
 	args = parser.parse_args()
-	if args.pipeline_name not in all_inputs:
-		print("Pipeline does not exist")
-		print("List of available pipelines")
-		print("\n".join(all_inputs.keys()))
-		exit()
 
-	vizualize_ensemble(all_inputs[args.pipeline_name], args.interpreter_name, args.dataset_name, args.ensemble_name, args.visualizer_name)
+	if args.single:
+		main()
+		exit()
+		
+	while True:
+		try:
+			main()
+			time.sleep(5)
+		except Exception as e:
+			traceback.print_exc()
+			print("Exception: {}".format(e))
+			time.sleep(1)

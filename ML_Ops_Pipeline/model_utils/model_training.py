@@ -2,6 +2,7 @@
 model_training
 """
 
+import re
 import torch
 
 import glob
@@ -14,6 +15,7 @@ from datetime import datetime
 #import multiprocessing
 
 import json
+import mlflow
 
 from ..all_pipelines import get_all_inputs
 from ..pipeline_input import source_hash
@@ -22,7 +24,9 @@ from ..history import local_history
 
 import traceback
 
-def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified):
+from .model_visualizer_loop import visualize_model
+
+def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, visualizers):
 	print("-"*10)
 	print("model_name:\t",model_name)
 	print("interpreter_name:\t",interpreter_name)
@@ -35,40 +39,56 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 	)
 	os.makedirs(training_dir, exist_ok=True)
 	tb = "OK"
-	try:
-		dat = interpreters[interpreter_name](dataset_dir).get_dataset()
-		mod = model_classes[model_name](training_dir)
-		#mod.predict(dat['train'])
-		results, predictions = mod.train(dat['train']['x'], dat['train']['y'])
-		#print(results)
 
-		results_pkl = os.path.join(training_dir, "results.pkl")
-		predictions_pkl = os.path.join(training_dir, "predictions.pkl")
-		model_pkl = os.path.join(training_dir, "model.pkl")
+	with mlflow.start_run(description=training_dir, run_name=model_name) as run:
+		try:
+			dat = interpreters[interpreter_name](dataset_dir).get_dataset()
+			mod = model_classes[model_name](training_dir)
+			#mod.predict(dat['train'])
+			results, predictions = mod.train(dat['train']['x'], dat['train']['y'])
+			#print(results)
 
-		results_handle = open(results_pkl, 'wb')
-		pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
-		results_handle.close()
+			results_pkl = os.path.join(training_dir, "results.pkl")
+			predictions_pkl = os.path.join(training_dir, "predictions.pkl")
+			predictions_csv = os.path.join(training_dir, "predictions.csv")
+			model_pkl = os.path.join(training_dir, "model.pkl")
 
-		predictions_handle = open(predictions_pkl, 'wb')
-		pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
-		predictions_handle.close()
+			results_handle = open(results_pkl, 'wb')
+			pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			results_handle.close()
 
-		model_handle = open(model_pkl, 'wb')
-		pickle.dump(mod, model_handle, protocol=pickle.HIGHEST_PROTOCOL)
-		model_handle.close()
+			predictions_handle = open(predictions_pkl, 'wb')
+			pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			predictions_handle.close()
 
-		return (True, task_id, model_last_modified)
-	except Exception as ex:
-		print(ex)
-		tb = traceback.format_exc()
-	finally:
-		print(tb)
-		err_txt = os.path.join(training_dir, "err.txt")
-		err_file = open(err_txt, "w")
-		err_file.write(tb)
-		err_file.close()
-		return (False, task_id, model_last_modified)
+			model_handle = open(model_pkl, 'wb')
+			pickle.dump(mod, model_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			model_handle.close()
+
+			predictions.to_csv(predictions_csv)
+
+			for key in results:
+				mlflow.log_metric(key, results[key])
+			#mlflow.log_dict(predictions)
+
+			for visualizer_name in visualizers:
+				stat, task_id, model_last_modified, visual_dir = visualize_model(pipeline_name, model_name, interpreter_name, dataset_dir, task_id, model_last_modified, visualizers, visualizer_name, dat, 'train')
+				mlflow.log_artifacts(visual_dir)
+
+			return (True, task_id, model_last_modified)
+		except Exception as ex:
+			if isinstance(ex, KeyboardInterrupt): exit()
+			print(ex)
+			tb = traceback.format_exc()
+			mlflow.set_tag("LOG_STATUS", "FAILED")
+		finally:
+			print(tb)
+			err_txt = os.path.join(training_dir, "status.txt")
+			err_file = open(err_txt, "w")
+			err_file.write(tb)
+			err_file.close()
+			mlflow.log_artifacts(training_dir)
+			return (False, task_id, model_last_modified)
 
 def main():
 	loc_hist = local_history(__file__)

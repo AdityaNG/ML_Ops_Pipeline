@@ -1,6 +1,9 @@
 """
-model_analysis
+model_testing
 """
+
+import re
+import torch
 
 import glob
 import pickle
@@ -8,18 +11,22 @@ import os
 import time
 import inspect
 from datetime import datetime
-import sys
+#from multiprocessing import Pool
+#import multiprocessing
 
 import json
+import mlflow
 
 from ..all_pipelines import get_all_inputs
 from ..pipeline_input import source_hash
-from ..constants import DATASET_DIR, MODEL_TESTING, MODEL_TRAINING, folder_last_modified
+from ..constants import DATASET_DIR, MODEL_TESTING
 from ..history import local_history
 
 import traceback
 
-def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified):
+from .model_visualizer_loop import visualize_model
+
+def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, visualizers):
 	print("-"*10)
 	print("model_name:\t",model_name)
 	print("interpreter_name:\t",interpreter_name)
@@ -31,40 +38,58 @@ def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, mode
 		commit_id=model_last_modified
 	)
 	os.makedirs(testing_dir, exist_ok=True)
-	training_dir = MODEL_TRAINING.format(
-		pipeline_name=pipeline_name,
-		interpreter_name=interpreter_name,
-		model_name=model_name,
-		commit_id=model_last_modified
-	)
-	os.makedirs(training_dir, exist_ok=True)
 	tb = "OK"
-	try:
-		dat = interpreters[interpreter_name](dataset_dir).get_dataset()
-		mod = model_classes[model_name](training_dir)
-		#mod.predict(dat['test'])
-		results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
-		#print(results)
-		results_pkl = os.path.join(testing_dir, "results.pkl")
-		predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
 
-		results_handle = open(results_pkl, 'wb')
-		pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
-		results_handle.close()
+	with mlflow.start_run(description=testing_dir, run_name=model_name):
+		try:
+			
+			dat = interpreters[interpreter_name](dataset_dir).get_dataset()
+			mod = model_classes[model_name](testing_dir)
+			#mod.predict(dat['test'])
+			results, predictions = mod.test(dat['test']['x'], dat['test']['y'])
+			#print(results)
 
-		predictions_handle = open(predictions_pkl, 'wb')
-		pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
-		predictions_handle.close()
-		return (True, task_id, model_last_modified)
-	except Exception as ex:
-		tb = traceback.format_exc()
-	finally:
-		print(tb)
-		err_txt = os.path.join(testing_dir, "err.txt")
-		err_file = open(err_txt, "w")
-		err_file.write(tb)
-		err_file.close()
-		return (False, task_id, model_last_modified)
+			results_pkl = os.path.join(testing_dir, "results.pkl")
+			predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+			predictions_csv = os.path.join(testing_dir, "predictions.csv")
+			model_pkl = os.path.join(testing_dir, "model.pkl")
+
+			results_handle = open(results_pkl, 'wb')
+			pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			results_handle.close()
+
+			predictions_handle = open(predictions_pkl, 'wb')
+			pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			predictions_handle.close()
+
+			model_handle = open(model_pkl, 'wb')
+			pickle.dump(mod, model_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			model_handle.close()
+
+			predictions.to_csv(predictions_csv)
+
+			for key in results:
+				mlflow.log_metric(key, results[key])
+			#mlflow.log_dict(predictions)
+
+			for visualizer_name in visualizers:
+				stat, task_id, model_last_modified, visual_dir = visualize_model(pipeline_name, model_name, interpreter_name, dataset_dir, task_id, model_last_modified, visualizers, visualizer_name, dat, 'test')
+				mlflow.log_artifacts(visual_dir)
+
+			return (True, task_id, model_last_modified)
+		except Exception as ex:
+			if isinstance(ex, KeyboardInterrupt): exit()
+			print(ex)
+			tb = traceback.format_exc()
+			mlflow.set_tag("LOG_STATUS", "FAILED")
+		finally:
+			print(tb)
+			err_txt = os.path.join(testing_dir, "status.txt")
+			err_file = open(err_txt, "w")
+			err_file.write(tb)
+			err_file.close()
+			mlflow.log_artifacts(testing_dir)
+			return (False, task_id, model_last_modified)
 
 def main():
 	loc_hist = local_history(__file__)
@@ -81,19 +106,10 @@ def main():
 				
 				model_classes = all_inputs[pipeline_name].get_pipeline_model()
 				for model_name in model_classes:
-					training_dir = MODEL_TRAINING.format(
-						pipeline_name=pipeline_name,
-						interpreter_name=interpreter_name,
-						model_name=model_name
-					)
-					os.makedirs(training_dir, exist_ok=True)
-					#model_pkl = os.path.join(training_dir, "model.pkl")
 					
-					if os.path.exists(training_dir):
-						model_last_modified = str(datetime.fromtimestamp(folder_last_modified(training_dir)))
-					else:
-						model_last_modified = str(datetime.fromtimestamp(0))
-					#model_last_modified = str(source_hash(model_classes[model_name]))
+					model_file_path = inspect.getfile(model_classes[model_name])
+					#model_last_modified = str(datetime.fromtimestamp(os.path.getmtime(model_file_path)))
+					model_last_modified = str(source_hash(model_classes[model_name]))
 					task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir
 					
 					if loc_hist[task_id] != model_last_modified:
@@ -101,8 +117,6 @@ def main():
 						task_list[pipeline_name].setdefault(interpreter_name, {})
 						task_list[pipeline_name][interpreter_name].setdefault(dataset_dir, {})
 						task_list[pipeline_name][interpreter_name][dataset_dir].setdefault(model_name, (task_id, model_last_modified))
-
-						analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
 
 	if task_list == {}:
 		#print("Waiting for new tasks...")
@@ -112,6 +126,8 @@ def main():
 	print("Task list:\n", json.dumps(task_list, sort_keys=True, indent=4))
 	print("-"*10)
 
+	pool_args = []
+
 	for pipeline_name in task_list:
 		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
 		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
@@ -120,7 +136,7 @@ def main():
 			interpreter_datasets = task_list[pipeline_name][interpreter_name].keys()
 			for dataset_dir in interpreter_datasets:
 				
-				dat = interpreters[interpreter_name](dataset_dir).get_dataset()
+				#dat = interpreters[interpreter_name](dataset_dir).get_dataset()
 				model_classes = all_inputs[pipeline_name].get_pipeline_model()
 				for model_name in task_list[pipeline_name][interpreter_name][dataset_dir].keys():
 					print("-"*10)
@@ -133,38 +149,23 @@ def main():
 						model_name=model_name
 					)
 					os.makedirs(testing_dir, exist_ok=True)
-					training_dir = MODEL_TRAINING.format(
-						pipeline_name=pipeline_name,
-						interpreter_name=interpreter_name,
-						model_name=model_name
-					)
-					os.makedirs(training_dir, exist_ok=True)
+					
+					task_id, model_last_modified = task_list[pipeline_name][interpreter_name][dataset_dir][model_name]
+					
+					pool_args.append((pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified))
 
-					try:
-						mod = model_classes[model_name](training_dir)
-						#mod.predict(dat['test'])
-						results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
-						#print(results)
-						results_pkl = os.path.join(testing_dir, "results.pkl")
-						predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
-
-						results_handle = open(results_pkl, 'wb')
-						pickle.dump(results, results_handle, protocol=pickle.HIGHEST_PROTOCOL)
-						results_handle.close()
-
-						predictions_handle = open(predictions_pkl, 'wb')
-						pickle.dump(predictions, predictions_handle, protocol=pickle.HIGHEST_PROTOCOL)
-						predictions_handle.close()
-					except Exception as ex:
-						print(ex)
-						traceback.print_exc()
-					finally:
-						task_id, model_last_modified = task_list[pipeline_name][interpreter_name][dataset_dir][model_name]
-						loc_hist[task_id] = model_last_modified
+	#with torch.multiprocessing.Pool(torch.multiprocessing.cpu_count()) as p:
+	with torch.multiprocessing.Pool(1) as p:
+		res = p.starmap(test_model, pool_args)
+		for status, task_id, model_last_modified in res:
+			#status, task_id, model_last_modified = test_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified)
+			if status:
+				loc_hist[task_id] = model_last_modified
 
 if __name__ == "__main__":
-	import traceback
 	import argparse
+
+	torch.multiprocessing.set_start_method('spawn')# good solution !!!!
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--single', action='store_true', help='Run the loop only once')
