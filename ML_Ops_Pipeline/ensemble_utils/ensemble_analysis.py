@@ -42,15 +42,15 @@ def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir
 	)
 	os.makedirs(testing_dir, exist_ok=True)
 	tb = "OK"
-	with mlflow.start_run(description=testing_dir, run_name=model_name):
+	with mlflow.start_run(description=testing_dir, run_name='test_'+ensemble_name):
 		try:
 			model_predictions = {}
 			for model_name in model_classes:
 
-				testing_dir = MODEL_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
-				os.makedirs(testing_dir, exist_ok=True)
-				results_pkl = os.path.join(testing_dir, "results.pkl")
-				predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+				model_testing_dir = MODEL_TESTING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
+				os.makedirs(model_testing_dir, exist_ok=True)
+				results_pkl = os.path.join(model_testing_dir, "results.pkl")
+				predictions_pkl = os.path.join(model_testing_dir, "predictions.pkl")
 					
 				results_handle = open(results_pkl, 'rb')
 				results = pickle.load(results_handle)

@@ -40,7 +40,7 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 	os.makedirs(training_dir, exist_ok=True)
 	tb = "OK"
 
-	with mlflow.start_run(description=training_dir, run_name=model_name) as run:
+	with mlflow.start_run(description=training_dir, run_name='train_'+model_name) as run:
 		try:
 			dat = interpreters[interpreter_name](dataset_dir).get_dataset()
 			mod = model_classes[model_name](training_dir)

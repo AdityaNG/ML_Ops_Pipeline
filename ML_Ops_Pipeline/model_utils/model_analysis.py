@@ -40,7 +40,7 @@ def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, mode
 	os.makedirs(testing_dir, exist_ok=True)
 	tb = "OK"
 
-	with mlflow.start_run(description=testing_dir, run_name=model_name):
+	with mlflow.start_run(description=testing_dir, run_name='test_'+model_name):
 		try:
 			
 			dat = interpreters[interpreter_name](dataset_dir).get_dataset()
