@@ -52,7 +52,12 @@ def train_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, 
 			model_predictions = {}
 			for model_name in model_classes:
 
-				model_training_dir = MODEL_TRAINING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name)
+				model_training_dir = MODEL_TRAINING.format(
+					pipeline_name=pipeline_name,
+					interpreter_name=interpreter_name,
+					model_name=model_name,
+					commit_id=ensemble_last_modified
+				)
 				os.makedirs(model_training_dir, exist_ok=True)
 				results_pkl = os.path.join(model_training_dir, "results.pkl")
 				predictions_pkl = os.path.join(model_training_dir, "predictions.pkl")
