@@ -1,11 +1,17 @@
 import os
 
-PIPELINE_HOME = os.path.join(os.path.expanduser('~'), ".ML_Ops_Pipeline")
+if 'PIPELINE_HOME' in os.environ:
+	PIPELINE_HOME = os.environ['PIPELINE_HOME']
+	assert os.path.exists(PIPELINE_HOME)
+else:
+	PIPELINE_HOME = os.path.join(os.path.expanduser('~'), ".ML_Ops_Pipeline")
 
 DATA_BASE_DIR = os.path.join(PIPELINE_HOME, "data/")
 RAW_DATASET_DIR = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/raw_datasets/")
 DATASET_DIR = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/datasets/")
 LOG_DIR = os.path.join(PIPELINE_HOME, "logs/")
+MLFLOW_DIR = os.path.join(PIPELINE_HOME, "mlflow/")
+os.makedirs(LOG_DIR, exist_ok=True)
 #MODEL_TRAINING_SETTINGS = "data/{pipeline_name}/model_training_settings.pkl"
 #MODEL_VALIDATION_SETTINGS = "data/{pipeline_name}/model_validation_settings.pkl"
 
@@ -59,7 +65,7 @@ def generate_tree():
 				print(testing_dir)
 				print('\t',model_name, models[model_name])
 
-			# ensemblers = all_inputs[pipeline_name].get_pipeline_ensembler()
+			# ensemblers = all_inputs[pipeline_name].get_pipeline_ensemble()
 			# for ensembler_name in ensemblers:
 			# 	training_dir = ENSEMBLE_TRAINING.format(pipeline_name=pipeline_name, interpreter_name=interpreter_name, ensembler_name=ensembler_name)
 			# 	os.makedirs(training_dir, exist_ok=True)

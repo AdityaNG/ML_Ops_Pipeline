@@ -26,7 +26,7 @@ import traceback
 
 from .model_visualizer_loop import visualize_model
 
-def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, visualizers):
+def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, task_id_source_hash, model_last_source_hash, visualizers):
 	print("-"*10)
 	print("model_name:\t",model_name)
 	print("interpreter_name:\t",interpreter_name)
@@ -38,10 +38,16 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 		commit_id=model_last_modified
 	)
 	os.makedirs(training_dir, exist_ok=True)
-	tb = "OK"
+	expt = mlflow.get_experiment_by_name(pipeline_name)
+	if not expt:
+		mlflow.create_experiment(pipeline_name)
+		expt = mlflow.get_experiment_by_name(pipeline_name)
+	tb = "KeyboardInterrupt"
 
-	with mlflow.start_run(description=training_dir, run_name='train_'+model_name) as run:
+	with mlflow.start_run(description=training_dir, run_name='train_'+model_name, experiment_id=expt.experiment_id) as run:
 		try:
+			mlflow.set_tag("COMMIT", model_last_modified)
+
 			dat = interpreters[interpreter_name](dataset_dir).get_dataset()
 			mod = model_classes[model_name](training_dir)
 			#mod.predict(dat['train'])
@@ -68,6 +74,8 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 			predictions.to_csv(predictions_csv)
 
 			for key in results:
+				#assert type(results[key]) in [str, int, float], "results[" + key + "]: " + str(results[key]) + " -> " + str(type(results[key]))
+				print(key, results[key])
 				mlflow.log_metric(key, results[key])
 			#mlflow.log_dict(predictions)
 
@@ -75,9 +83,16 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 				stat, task_id, model_last_modified, visual_dir = visualize_model(pipeline_name, model_name, interpreter_name, dataset_dir, task_id, model_last_modified, visualizers, visualizer_name, dat, 'train')
 				mlflow.log_artifacts(visual_dir)
 
-			return (True, task_id, model_last_modified)
+			mlflow.set_tag("LOG_STATUS", "SUCCESS")
+			return (True, task_id, model_last_modified, task_id_source_hash, model_last_source_hash)
+		except KeyboardInterrupt:
+			print("Interrupt recieved at model_training")
+			print("-"*10)
+			print("model_name:\t",model_name)
+			print("interpreter_name:\t",interpreter_name)
+			print("dataset_dir:\t",dataset_dir)
+			raise KeyboardInterrupt
 		except Exception as ex:
-			if isinstance(ex, KeyboardInterrupt): exit()
 			print(ex)
 			tb = traceback.format_exc()
 			mlflow.set_tag("LOG_STATUS", "FAILED")
@@ -88,7 +103,7 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 			err_file.write(tb)
 			err_file.close()
 			mlflow.log_artifacts(training_dir)
-			return (False, task_id, model_last_modified)
+			return (False, task_id, model_last_modified, task_id_source_hash, model_last_source_hash)
 
 def main():
 	loc_hist = local_history(__file__)

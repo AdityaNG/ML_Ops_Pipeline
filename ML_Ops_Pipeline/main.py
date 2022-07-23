@@ -3,16 +3,12 @@ import os
 import subprocess
 import traceback
 import signal
-from constants import LOG_DIR, DATA_BASE_DIR
+from .constants import LOG_DIR, DATA_BASE_DIR
+from .helper import all_finished
 
 os.makedirs(LOG_DIR, exist_ok=True)
 
-def all_finished(processes):
-	for p in processes:
-		is_running = processes[p].poll() is None 
-		if is_running:
-			return False
-	return True
+
 
 try:
 	process_list = [

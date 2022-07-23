@@ -29,7 +29,7 @@ from .ensemble_visualizer_loop import vizualize_ensemble
 
 import traceback
 
-def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, ensemble_classes, visualizers):
+def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, task_id_source_hash, model_last_source_hash, ensemble_classes, visualizers):
 	print("-"*10)
 	print("ensemble_name:\t",ensemble_name)
 	print("interpreter_name:\t",interpreter_name)
@@ -41,9 +41,16 @@ def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir
 		commit_id=ensemble_last_modified
 	)
 	os.makedirs(testing_dir, exist_ok=True)
+	
+	expt = mlflow.get_experiment_by_name(pipeline_name)
+	if not expt:
+		mlflow.create_experiment(pipeline_name)
+		expt = mlflow.get_experiment_by_name(pipeline_name)
+
 	tb = "OK"
-	with mlflow.start_run(description=testing_dir, run_name='test_'+ensemble_name):
+	with mlflow.start_run(description=testing_dir, run_name='test_'+ensemble_name, experiment_id=expt.experiment_id):
 		try:
+			mlflow.set_tag("COMMIT", ensemble_last_modified)
 			model_predictions = {}
 			for model_name in model_classes:
 
@@ -64,7 +71,7 @@ def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir
 			dat = interpreters[interpreter_name](dataset_dir).get_dataset()
 			mod = ensemble_classes[ensemble_name](testing_dir)
 			#mod.predict(dat['test'])
-			results, predictions = mod.test(dat['test']['x'], dat['test']['y'])
+			results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
 			#print(results)
 
 			results_pkl = os.path.join(testing_dir, "results.pkl")
@@ -94,9 +101,16 @@ def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir
 				stat, task_id, model_last_modified, visual_dir = vizualize_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, task_id, model_last_modified, visualizers, visualizer_name, dat, 'test')
 				mlflow.log_artifacts(visual_dir)
 
-			return (True, task_id, ensemble_last_modified)
+			mlflow.set_tag("LOG_STATUS", "SUCCESS")
+			return (True, task_id, ensemble_last_modified, task_id_source_hash, model_last_source_hash)
+		except KeyboardInterrupt:
+			print("Interrupt recieved at ensemble_analysis")
+			print("-"*10)
+			print("ensemble_name:\t",ensemble_name)
+			print("interpreter_name:\t",interpreter_name)
+			print("dataset_dir:\t",dataset_dir)
+			raise KeyboardInterrupt
 		except Exception as ex:
-			if isinstance(ex, KeyboardInterrupt): exit()
 			print(ex)
 			tb = traceback.format_exc()
 			mlflow.set_tag("LOG_STATUS", "FAILED")
@@ -106,7 +120,7 @@ def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir
 			err_file = open(err_txt, "w")
 			err_file.write(tb)
 			err_file.close()
-			return (False, task_id, ensemble_last_modified)
+			return (False, task_id, ensemble_last_modified, task_id_source_hash, model_last_source_hash)
 
 def main():
 	loc_hist = local_history(__file__)

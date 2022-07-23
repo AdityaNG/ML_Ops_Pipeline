@@ -10,6 +10,7 @@ import pickle
 import streamlit as st
 import pandas as pd
 
+import mlflow
 import tensorflow as tf
 from .constants import DATASET_DIR, MODEL_TRAINING, MODEL_TESTING, MODEL_VISUAL
 
@@ -36,6 +37,11 @@ def source_hash(self) -> int:
 		
 
 class pipeline_classes:
+
+	pipeline_mlflow = mlflow
+
+	def set_status(self, stat):
+		self.pipeline_mlflow.set_tag("LOG_STATUS", stat)
 
 	def __hash__(self) -> int:
 		return source_hash(self)
@@ -295,7 +301,7 @@ class pipeline_input(pipeline_classes):
 	def get_pipeline_model_by_name(self, name: str) -> type:
 		return self.__pipeline_model[name]
 
-	def get_pipeline_ensembler_by_name(self, name: str) -> type:
+	def get_pipeline_ensemble_by_name(self, name: str) -> type:
 		return self.__pipeline_ensembler[name]
 	
 	def get_pipeline_visualizer_by_name(self, name: str) -> type:
@@ -307,7 +313,7 @@ class pipeline_input(pipeline_classes):
 	def get_pipeline_model(self) -> dict:
 		return self.__pipeline_model
 
-	def get_pipeline_ensembler(self) -> dict:
+	def get_pipeline_ensemble(self) -> dict:
 		return self.__pipeline_ensembler
 
 	def get_pipeline_visualizer(self) -> dict:

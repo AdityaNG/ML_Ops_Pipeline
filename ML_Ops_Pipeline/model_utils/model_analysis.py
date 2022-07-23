@@ -3,6 +3,7 @@ model_testing
 """
 
 import re
+from cv2 import exp
 import torch
 
 import glob
@@ -26,7 +27,7 @@ import traceback
 
 from .model_visualizer_loop import visualize_model
 
-def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, visualizers):
+def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, task_id_source_hash, model_last_source_hash, visualizers):
 	print("-"*10)
 	print("model_name:\t",model_name)
 	print("interpreter_name:\t",interpreter_name)
@@ -40,13 +41,18 @@ def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, mode
 	os.makedirs(testing_dir, exist_ok=True)
 	tb = "OK"
 
-	with mlflow.start_run(description=testing_dir, run_name='test_'+model_name):
+	expt = mlflow.get_experiment_by_name(pipeline_name)
+	if not expt:
+		mlflow.create_experiment(pipeline_name)
+		expt = mlflow.get_experiment_by_name(pipeline_name)
+
+	with mlflow.start_run(description=testing_dir, run_name='test_'+model_name, experiment_id=expt.experiment_id):
 		try:
-			
+			mlflow.set_tag("COMMIT", model_last_modified)
 			dat = interpreters[interpreter_name](dataset_dir).get_dataset()
 			mod = model_classes[model_name](testing_dir)
 			#mod.predict(dat['test'])
-			results, predictions = mod.test(dat['test']['x'], dat['test']['y'])
+			results, predictions = mod.evaluate(dat['test']['x'], dat['test']['y'])
 			#print(results)
 
 			results_pkl = os.path.join(testing_dir, "results.pkl")
@@ -76,9 +82,16 @@ def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, mode
 				stat, task_id, model_last_modified, visual_dir = visualize_model(pipeline_name, model_name, interpreter_name, dataset_dir, task_id, model_last_modified, visualizers, visualizer_name, dat, 'test')
 				mlflow.log_artifacts(visual_dir)
 
-			return (True, task_id, model_last_modified)
+			mlflow.set_tag("LOG_STATUS", "SUCCESS")
+			return (True, task_id, model_last_modified, task_id_source_hash, model_last_source_hash)
+		except KeyboardInterrupt:
+			print("Interrupt recieved at model_analysis")
+			print("-"*10)
+			print("model_name:\t",model_name)
+			print("interpreter_name:\t",interpreter_name)
+			print("dataset_dir:\t",dataset_dir)
+			raise KeyboardInterrupt
 		except Exception as ex:
-			if isinstance(ex, KeyboardInterrupt): exit()
 			print(ex)
 			tb = traceback.format_exc()
 			mlflow.set_tag("LOG_STATUS", "FAILED")
@@ -89,7 +102,7 @@ def analyze_model(pipeline_name, model_name, interpreter_name, dataset_dir, mode
 			err_file.write(tb)
 			err_file.close()
 			mlflow.log_artifacts(testing_dir)
-			return (False, task_id, model_last_modified)
+			return (False, task_id, model_last_modified, task_id_source_hash, model_last_source_hash)
 
 def main():
 	loc_hist = local_history(__file__)

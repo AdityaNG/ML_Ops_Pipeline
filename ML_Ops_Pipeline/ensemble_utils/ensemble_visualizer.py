@@ -193,7 +193,6 @@ def main():
 						try:
 							visualizers[visualizer_name]().visualize(dat['test']['x'], dat['test']['y'], results, predictions, visual_dir)
 						except Exception as ex:
-							if isinstance(ex, KeyboardInterrupt): exit()
 							print(ex)
 							traceback.print_exc()
 						finally:

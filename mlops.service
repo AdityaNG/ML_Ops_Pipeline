@@ -8,8 +8,8 @@ Type=simple
 Restart=always
 RestartSec=1
 User=lxd1kor
-WorkingDirectory=/home/lxd1kor/Downloads/ML_Ops_Pipeline
-ExecStart=/usr/bin/python3 /home/lxd1kor/Downloads/ML_Ops_Pipeline/main.py
+WorkingDirectory=/home/lxd1kor/bosch/ML_Ops_Pipeline
+ExecStart=/usr/bin/python3 -m ML_Ops_Pipeline
 
 [Install]
 WantedBy=multi-user.target
