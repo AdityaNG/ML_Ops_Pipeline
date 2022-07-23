@@ -14,10 +14,11 @@ from datetime import datetime
 #import multiprocessing
 
 import json
+import mlflow
 
 from .all_pipelines_git import get_all_inputs
 from .pipeline_input import source_hash
-from .constants import DATASET_DIR, ENSEMBLE_TRAINING, MODEL_TRAINING
+from .constants import DATASET_DIR, ENSEMBLE_TRAINING, MODEL_TRAINING, MLFLOW_DIR
 from .history import local_history
 
 import traceback
@@ -171,6 +172,8 @@ def main(disable_torch_multiprocessing=False):
 
 if __name__ == "__main__":
 	import argparse
+	
+	mlflow.set_tracking_uri("file://" + MLFLOW_DIR)
 
 	torch.multiprocessing.set_start_method('spawn')
 

@@ -24,9 +24,6 @@ if __name__ == "__main__":
 	parser.add_argument('--disable-torch-multiprocessing', action='store_true', help='Disable multiprocessing')
 	args = parser.parse_args()
 
-	mlflow.set_tracking_uri("file://" + MLFLOW_DIR)
-
-
 	if args.single:
 		main(disable_torch_multiprocessing=args.disable_torch_multiprocessing)
 		exit()
@@ -47,20 +44,20 @@ if __name__ == "__main__":
 			#processes[process] = subprocess.Popen(['python', '-m', 'ML_Ops_Pipeline.main_git', '--disable-torch-multiprocessing'], stdout=stdout_process, stderr=stderr_process)
 			processes[process] = subprocess.Popen(['python', '-m', 'ML_Ops_Pipeline.main_git', '--disable-torch-multiprocessing'])
 
-			# browsepy 0.0.0.0 8080 --directory data
+			# browsepy 0.0.0.0 8081 --directory data
 			process = 'browsepy'
 			stdout_process = open(os.path.join(LOG_DIR, "stdout_" + process + ".log"), 'w')
 			stderr_process = open(os.path.join(LOG_DIR, "stderr_" + process + ".log"), 'w')
-			processes[process] = subprocess.Popen(['browsepy', '0.0.0.0', '8080', '--directory', DATA_BASE_DIR], stdout=stdout_process, stderr=stderr_process)
+			processes[process] = subprocess.Popen(['browsepy', '0.0.0.0', '8081', '--directory', DATA_BASE_DIR], stdout=stdout_process, stderr=stderr_process)
 
 			# FLASK_APP=rest_server.py FLASK_ENV=development flask run
-			process = 'rest_server'
-			stdout_process = open(os.path.join(LOG_DIR, "stdout_" + process + ".log"), 'w')
-			stderr_process = open(os.path.join(LOG_DIR, "stderr_" + process + ".log"), 'w')
-			my_env = os.environ.copy()
-			my_env['FLASK_APP'] = "rest_server.py"
-			my_env['FLASK_ENV'] = "development"
-			processes[process] = subprocess.Popen(['flask', 'run'], stdout=stdout_process, stderr=stderr_process, env=my_env)
+			# process = 'rest_server'
+			# stdout_process = open(os.path.join(LOG_DIR, "stdout_" + process + ".log"), 'w')
+			# stderr_process = open(os.path.join(LOG_DIR, "stderr_" + process + ".log"), 'w')
+			# my_env = os.environ.copy()
+			# my_env['FLASK_APP'] = "rest_server.py"
+			# my_env['FLASK_ENV'] = "development"
+			# processes[process] = subprocess.Popen(['flask', 'run'], stdout=stdout_process, stderr=stderr_process, env=my_env)
 
 			try:
 				while True:
