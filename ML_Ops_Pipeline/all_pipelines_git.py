@@ -46,7 +46,7 @@ def get_all_inputs():
 			repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
 		else:
 			if log: print("clone", pipeline_dir)
-			# repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
+			repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
 		
 		#origin = repo.remote
 		origin = repo.remotes.origin
