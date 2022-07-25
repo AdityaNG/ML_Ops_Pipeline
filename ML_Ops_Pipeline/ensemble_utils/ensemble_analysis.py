@@ -55,7 +55,9 @@ def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir
 			for model_name in model_classes:
 
 				model_testing_dir = MODEL_TESTING.format(
-					pipeline_name=pipeline_name, interpreter_name=interpreter_name, model_name=model_name,
+					pipeline_name=pipeline_name,
+					interpreter_name=interpreter_name,
+					model_name=model_name,
 					commit_id=ensemble_last_modified
 				)
 				os.makedirs(model_testing_dir, exist_ok=True)
