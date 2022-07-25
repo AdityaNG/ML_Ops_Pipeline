@@ -12,7 +12,7 @@ import pandas as pd
 
 import mlflow
 import tensorflow as tf
-from .constants import DATASET_DIR, MODEL_TRAINING, MODEL_TESTING, MODEL_VISUAL
+from .constants import DATASET_DIR, MODEL_TRAINING, MODEL_TESTING, MODEL_VISUAL, MODEL_BASE_NAME
 
 def source_hash(self) -> int:
 	if self == object:
@@ -101,6 +101,16 @@ class pipeline_model(pipeline_classes):
 
 class pipeline_ensembler(pipeline_classes):
 
+	model = None     
+	def __init__(self, training_dir, load=True) -> None:
+		self.training_dir = training_dir
+		if load:
+			self.load()
+
+	def load(self) -> None:
+		# Load the model into self.model
+		pass
+
 	def predict(self, x: np.array) -> np.array:
 		# Given a list of lists of predictions from multiple learners
 		# Say m learners and n predictions
@@ -173,20 +183,38 @@ class pipeline_streamlit_visualizer(pipeline_classes):
 			key='dataset_dir',
 		)
 
+		self.model_base_name = MODEL_BASE_NAME.format(
+			pipeline_name=self.pipeline_name,
+			model_name=self.model_name
+		)
+		self.commits_list = os.listdir(self.model_base_name)
+
+		self.commit_id = self.st.sidebar.selectbox(
+			'Commit ID',
+			self.commits_list,
+			key='commit_id',
+		)
+
 		training_dir = MODEL_TRAINING.format(
 			pipeline_name=self.pipeline_name,
 			interpreter_name=self.interpreter_name,
-			model_name=self.model_name
+			model_name=self.model_name,
+			commit_id=self.commit_id
 		)
 
 		testing_dir = MODEL_TESTING.format(
 			pipeline_name=self.pipeline_name,
 			interpreter_name=self.interpreter_name,
-			model_name=self.model_name
+			model_name=self.model_name,
+			commit_id=self.commit_id
 		)
 
 		self.testing_results_pkl = os.path.join(testing_dir, "results.pkl")
 		self.testing_predictions_pkl = os.path.join(testing_dir, "predictions.pkl")
+		if not (os.path.exists(self.self.testing_results_pkl) and os.path.exists(self.self.testing_predictions_pkl)):
+			st.markdown("# Data Does not exist")
+			return
+
 		self.testing_results_handle = open(self.testing_results_pkl, 'rb')
 		self.testing_results = pickle.load(self.testing_results_handle)
 		self.testing_results_handle.close()

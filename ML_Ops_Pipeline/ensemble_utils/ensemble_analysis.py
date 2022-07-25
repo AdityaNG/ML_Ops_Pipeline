@@ -29,7 +29,7 @@ from .ensemble_visualizer_loop import vizualize_ensemble
 
 import traceback
 
-def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, task_id_source_hash, model_last_source_hash, ensemble_classes, visualizers):
+def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash, ensemble_classes, visualizers):
 	print("-"*10)
 	print("ensemble_name:\t",ensemble_name)
 	print("interpreter_name:\t",interpreter_name)
@@ -101,11 +101,12 @@ def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir
 			#mlflow.log_dict(predictions)
 
 			for visualizer_name in visualizers:
-				stat, task_id, model_last_modified, visual_dir = vizualize_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, task_id, model_last_modified, visualizers, visualizer_name, dat, 'test')
+				#stat, task_id, model_last_modified, visual_dir = vizualize_ensemble(pipeline_name, model_name, interpreter_name, dataset_dir, task_id, model_last_modified, visualizers, visualizer_name, dat, 'test')
+				stat, task_id, ensemble_last_modified_alt, visual_dir = vizualize_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, task_id, ensemble_last_modified, visualizers, visualizer_name, dat, 'test')
 				mlflow.log_artifacts(visual_dir)
 
 			mlflow.set_tag("LOG_STATUS", "SUCCESS")
-			return (True, task_id, ensemble_last_modified, task_id_source_hash, model_last_source_hash)
+			return (True, task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash)
 		except KeyboardInterrupt:
 			print("Interrupt recieved at ensemble_analysis")
 			print("-"*10)
@@ -123,7 +124,7 @@ def analyze_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir
 			err_file = open(err_txt, "w")
 			err_file.write(tb)
 			err_file.close()
-			return (False, task_id, ensemble_last_modified, task_id_source_hash, model_last_source_hash)
+			return (False, task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash)
 
 def main():
 	loc_hist = local_history(__file__)

@@ -16,6 +16,7 @@ os.makedirs(LOG_DIR, exist_ok=True)
 #MODEL_VALIDATION_SETTINGS = "data/{pipeline_name}/model_validation_settings.pkl"
 
 MODEL_BASE = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/models/")
+MODEL_BASE_NAME = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/models/{model_name}/")
 MODEL_TRAINING = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/models/{model_name}/{commit_id}/training/{interpreter_name}")
 MODEL_TESTING = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/models/{model_name}/{commit_id}/testing/{interpreter_name}")
 MODEL_VISUAL = os.path.join(PIPELINE_HOME, "data/{pipeline_name}/visuals/{model_name}/{commit_id}/{interpreter_name}/{visualizer_name}/")
