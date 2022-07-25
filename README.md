@@ -24,35 +24,11 @@ python data_ingestion.py --input_dir ~/Downloads/karthika95-pedestrian-detection
 python3 data_ingestion.py --input_dir ~/datasets/klemenko-kitti-dataset/ --pipeline_name obj_det --interpreter_name KITTI_lemenko_interp
 ```
 
-To generate individual model outputs, run as follows.
+To view logs
 ```bash
-python model_analysis.py --single
+watch -n 1 "wget -qO-  http://bani-c-0069l.ban.apac.bosch.com:8081/open/logs/stdout_main_git.log | tail"
 ```
 
-To generate ensembler outputs, run as follows.
-```bash
-python ensemble_analysis.py --single
-```
-
-To visualize model results
-```bash
-python model_visualizer.py \
-	--pipeline_name obj_det \
-	--interpreter_name karthika95-pedestrian-detection \
-	--dataset_name 2022-06-15_21:25:11.138663 \
-	--model_name obj_det_pipeline_model_yolov5s \
-	--visualizer_name obj_det_data_visualizer
-```
-
-To visualize ensemble model results
-```bash
-python ensemble_visualizer.py \
-	--pipeline_name obj_det \
-	--interpreter_name karthika95-pedestrian-detection \
-	--dataset_name 2022-06-15_21:25:11.138663 \
-	--ensemble_name obj_det_pipeline_ensembler_1 \
-	--visualizer_name obj_det_data_visualizer
-```
 
 # Running as a systemd service
 The file <a href="mlops.service">mlops.service</a> is to be copied to `/etc/systemd/system/`. The service can then be started and status can be checked on using the following commands.

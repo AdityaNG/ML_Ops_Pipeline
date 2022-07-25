@@ -83,6 +83,9 @@ def get_all_inputs():
 		print("-"*10)
 
 	for p in pipelines_list:
+		if log:
+			print("-"*10)
+			print(p)
 		try:
 			p_name = p.split('/')[-1]
 			if p_name in all_inputs:

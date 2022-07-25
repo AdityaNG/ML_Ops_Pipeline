@@ -68,7 +68,7 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 			predictions_handle.close()
 
 			model_handle = open(model_pkl, 'wb')
-			pickle.dump(mod, model_handle, protocol=pickle.HIGHEST_PROTOCOL)
+			# pickle.dump(mod, model_handle, protocol=pickle.HIGHEST_PROTOCOL)
 			model_handle.close()
 
 			predictions.to_csv(predictions_csv)

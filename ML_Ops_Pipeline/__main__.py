@@ -13,7 +13,7 @@ if __name__ == "__main__":
 	import mlflow
 
 	from .main_git import main
-	from .constants import LOG_DIR, MLFLOW_DIR, DATA_BASE_DIR
+	from .constants import LOG_DIR, MLFLOW_DIR, PIPELINE_HOME
 	from .helper import all_finished
 
 
@@ -41,14 +41,14 @@ if __name__ == "__main__":
 			process = 'main_git'
 			stdout_process = open(os.path.join(LOG_DIR, "stdout_" + process + ".log"), 'w')
 			stderr_process = open(os.path.join(LOG_DIR, "stderr_" + process + ".log"), 'w')
-			#processes[process] = subprocess.Popen(['python', '-m', 'ML_Ops_Pipeline.main_git', '--disable-torch-multiprocessing'], stdout=stdout_process, stderr=stderr_process)
-			processes[process] = subprocess.Popen(['python', '-m', 'ML_Ops_Pipeline.main_git', '--disable-torch-multiprocessing'])
+			processes[process] = subprocess.Popen(['python', '-m', 'ML_Ops_Pipeline.main_git', '--disable-torch-multiprocessing'], stdout=stdout_process, stderr=stderr_process)
+			#processes[process] = subprocess.Popen(['python', '-m', 'ML_Ops_Pipeline.main_git', '--disable-torch-multiprocessing'])
 
 			# browsepy 0.0.0.0 8081 --directory data
 			process = 'browsepy'
 			stdout_process = open(os.path.join(LOG_DIR, "stdout_" + process + ".log"), 'w')
 			stderr_process = open(os.path.join(LOG_DIR, "stderr_" + process + ".log"), 'w')
-			processes[process] = subprocess.Popen(['browsepy', '0.0.0.0', '8081', '--directory', DATA_BASE_DIR], stdout=stdout_process, stderr=stderr_process)
+			processes[process] = subprocess.Popen(['browsepy', '0.0.0.0', '8081', '--directory', PIPELINE_HOME], stdout=stdout_process, stderr=stderr_process)
 
 			# FLASK_APP=rest_server.py FLASK_ENV=development flask run
 			# process = 'rest_server'
