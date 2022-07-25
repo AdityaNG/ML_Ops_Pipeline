@@ -39,12 +39,14 @@ def get_all_inputs():
 		pipeline_dir = os.path.join(REMOTE_PIPELINES_DIR, pipeline_name)
 		if os.path.exists(pipeline_dir):
 			if log: print("pull", pipeline_dir)
-			repo = git.Repo(pipeline_dir)
-			repo.git.clean('-xdf')
-			repo.git.reset('--hard')
+			# repo = git.Repo(pipeline_dir)
+			# repo.git.clean('-xdf')
+			# repo.git.reset('--hard')
+			os.rmdir(pipeline_dir)
+			repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
 		else:
 			if log: print("clone", pipeline_dir)
-			repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
+			# repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
 		
 		#origin = repo.remote
 		origin = repo.remotes.origin

@@ -42,7 +42,7 @@ def train_model(pipeline_name, model_name, interpreter_name, dataset_dir, model_
 	if not expt:
 		mlflow.create_experiment(pipeline_name)
 		expt = mlflow.get_experiment_by_name(pipeline_name)
-	tb = "OK or KeyboardInterrupt"
+	tb = "OK"
 
 	with mlflow.start_run(description=training_dir, run_name='train_'+model_name, experiment_id=expt.experiment_id) as run:
 		try:

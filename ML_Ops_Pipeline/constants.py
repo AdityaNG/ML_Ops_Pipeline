@@ -31,6 +31,10 @@ HISTORY_PATH = os.path.join(PIPELINE_HOME, "history")
 REMOTE_PIPELINES_DIR = os.path.join(PIPELINE_HOME, "remote_pipelines")
 REMOTE_PIPELINES_TXT = os.path.join(PIPELINE_HOME, "remote_pipelines.txt")
 
+if not os.path.exists(REMOTE_PIPELINES_TXT):
+	import shutil
+	shutil.copyfile("remote_pipelines.txt", REMOTE_PIPELINES_TXT)
+
 def folder_last_modified(folder):
 	last_modified = []
 	for path, directories, files in os.walk(folder):
