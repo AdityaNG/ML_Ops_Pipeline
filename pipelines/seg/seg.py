@@ -741,7 +741,7 @@ seg_input = pipeline_input("seg",
 	}, {
 		#'detectron_base_model': detectron_base_model,
 		'mask_rcnn': mask_rcnn,
-		# 'pointrend': pointrend
+		'pointrend': pointrend
 	}, {
 		#'seg_pipeline_ensembler_1': seg_pipeline_ensembler_1
 	}, {

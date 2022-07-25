@@ -83,18 +83,24 @@ def get_all_inputs():
 		print("-"*10)
 
 	for p in pipelines_list:
+		if log:
+			print("-"*10)
+			print(p)
 		try:
 			p_name = p.split('/')[-1]
 			if p_name in all_inputs:
-				pipeline = importlib.reload(all_inputs_modules[p_name])
 				if log:
 					print("Reloading:", p_name)
+				# pipeline = importlib.reload(all_inputs_modules[p_name])
+				pipeline = all_inputs_modules[p_name]
+				del pipeline
+				pipeline = importlib.import_module(p_name)
 			else:
+				if log:
+					print("Loading:", p_name)
 				#REMOTE_PIPELINES_DIR_NAME = REMOTE_PIPELINES_DIR.split("/")[-1]
 				#pipeline = importlib.import_module(REMOTE_PIPELINES_DIR_NAME + "." + p_name)
 				pipeline = importlib.import_module(p_name)
-				if log:
-					print("Loading:", p_name)
 				
 			p_exported = pipeline.exported_pipeline
 			all_inputs[p_name] = p_exported
