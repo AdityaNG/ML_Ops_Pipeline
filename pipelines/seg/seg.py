@@ -34,6 +34,17 @@ from detectron2.utils.visualizer import ColorMode, Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
 
 
+from detectron2 import model_zoo
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2.utils.visualizer import Visualizer, ColorMode
+from detectron2.data import MetadataCatalog
+coco_metadata = MetadataCatalog.get("coco_2017_val")
+
+# import PointRend project
+from detectron2.projects import point_rend
+# git clone --branch v0.6 https://github.com/facebookresearch/detectron2.git detectron2_repo
+# pip install -e detectron2_repo  ''' If have to compile from source '''
 
 class seg_kitti(pipeline_dataset_interpreter):
 
@@ -537,6 +548,93 @@ class mask_rcnn(detectron_base_model):
 		'vehicle':  (2, 3, 5, 7, )
 	}
 
+
+class pointrend(seg_evaluator, pipeline_model, seg_cfg):
+	# config_path = os.path.expanduser("~/detectron2/configs/quick_schedules/mask_rcnn_R_50_FPN_inference_acc_test.yaml")
+
+	model_output_classes = {
+		'vehicle':  (2, 3, 5, 7, )
+	}
+
+	def load(self):
+		# cfg = get_cfg()
+		# cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+		# cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
+		# cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+		# mask_rcnn_predictor = DefaultPredictor(cfg)
+		# # mask_rcnn_outputs = mask_rcnn_predictor(im)
+
+
+		self.cfg = get_cfg()
+		# Add PointRend-specific config
+		point_rend.add_pointrend_config(self.cfg)
+		# Load a config from file
+		self.cfg.merge_from_file("detectron2_repo/projects/PointRend/configs/InstanceSegmentation/pointrend_rcnn_R_50_FPN_3x_coco.yaml")
+		self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
+		# Use a model from PointRend model zoo: https://github.com/facebookresearch/detectron2/tree/master/projects/PointRend#pretrained-models
+		self.cfg.MODEL.WEIGHTS = "detectron2://PointRend/InstanceSegmentation/pointrend_rcnn_R_50_FPN_3x_coco/164955410/model_final_edd263.pkl"
+		self.predictor = DefaultPredictor(self.cfg)
+		# outputs = predictor(im)
+		
+	def train(self, x, y) -> np.array:
+		#preds = self.predict(x)
+
+		# TODO: Train the model		
+		results, preds = self.evaluate(x,y)
+
+		return results, preds
+
+	def predict(self, x) -> np.array:
+		# Runs prediction on list of values x of length n
+		# Returns a list of values of length n
+
+		predict_results = {
+			'image_2': [],
+			'boxes': [],
+			'scores': [],
+			'classes': [],
+			'keypoints': [],
+			'masks': [],
+			'model_output_classes': []
+		}
+		for index, row in tqdm(x.iterrows(), total=x.shape[0]):
+		# 	# TODO produce model predictions
+			# img = cv2.imread(row['image_2'])
+			img = read_image(row['image_2'])
+			
+			outputs = self.predictor(img)
+			
+			# instances = outputs["instances"].to(self.cpu_device) # detectron2.structures.instances.Instances
+			instances = outputs["instances"].to('cpu')
+			predictions = instances
+			boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
+			scores = predictions.scores if predictions.has("scores") else None
+			classes = predictions.pred_classes.tolist() if predictions.has("pred_classes") else None
+			keypoints = predictions.pred_keypoints if predictions.has("pred_keypoints") else None
+
+			if predictions.has("pred_masks"):
+
+				# masks = (predictions.pred_masks).numpy()
+				# masks= predictions.pred_masks.cpu().numpy()
+				masks = np.asarray(predictions.pred_masks)
+			else:
+				masks = None
+
+
+			predict_results['image_2'] += [row['image_2'], ]
+			predict_results['boxes'] += [boxes, ]
+			predict_results['scores'] += [scores, ]
+			predict_results['classes'] += [classes, ]
+			predict_results['keypoints'] += [keypoints, ]
+			predict_results['masks'] += [masks, ]
+			predict_results['model_output_classes'] += [self.model_output_classes, ]
+
+
+		predict_results = pd.DataFrame(predict_results)
+		return predict_results
+
+
+
 # import sys
 # sys.path.append(os.path.expanduser("~/detectron2/projects/PointRend/"))
 # from point_rend import add_pointrend_config
@@ -602,8 +700,8 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 		self.st.write(self.testing_results)
 		#self.st.write(self.testing_predictions)
 
-		self.st.markdown("# Training Results")
-		self.st.write(self.training_results)
+		# self.st.markdown("# Training Results")
+		#self.st.write(self.training_results)
 
 		self.st.markdown("# Visuals")
 		training_data = False
@@ -737,16 +835,16 @@ class streamlit_viz(pipeline_streamlit_visualizer):
 seg_input = pipeline_input("seg", 
 	{
 		'seg_kitti': seg_kitti,
-		'interp_airsim':interp_airsim
+		#'interp_airsim':interp_airsim
 	}, {
 		#'detectron_base_model': detectron_base_model,
 		'mask_rcnn': mask_rcnn,
-		# 'pointrend': pointrend
+		'pointrend': pointrend
 	}, {
 		#'seg_pipeline_ensembler_1': seg_pipeline_ensembler_1
 	}, {
 		'iou_vis': iou_vis,
-		'video_vis': video_vis
+		#'video_vis': video_vis
 	}, p_pipeline_streamlit_visualizer=streamlit_viz)
 
 # Write the pipeline object to exported_pipeline
