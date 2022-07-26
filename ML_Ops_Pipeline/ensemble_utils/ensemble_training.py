@@ -21,7 +21,7 @@ from datetime import datetime
 import json
 import mlflow
 
-from ..all_pipelines import get_all_inputs
+from ..all_pipelines_git import get_all_inputs
 from ..pipeline_input import source_hash
 from ..constants import DATASET_DIR, ENSEMBLE_TRAINING, MODEL_TESTING, MODEL_TRAINING
 from ..history import local_history
@@ -75,7 +75,7 @@ def train_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, 
 			mod = ensemble_classes[ensemble_name](training_dir)
 			#mod.predict(dat['train'])
 			#results, predictions = mod.train(dat['train']['x'], dat['train']['y'])
-			results, predictions = mod.train(model_predictions, dat['train']['y'])
+			results, predictions = mod.train(dat['train']['x'], dat['train']['y'], model_predictions=model_predictions)
 			#print(results)
 
 			results_pkl = os.path.join(training_dir, "results.pkl")
@@ -131,32 +131,55 @@ def train_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, 
 def main():
 	loc_hist = local_history(__file__)
 	task_list = {}
-	all_inputs = get_all_inputs()
+	all_inputs = get_all_inputs(debug=True)
 
 	for pipeline_name in all_inputs:
 		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
-		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
+		interpreters = all_inputs[pipeline_name]['pipeline'].get_pipeline_dataset_interpreter()
 		for interpreter_name in interpreters:
 			interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
 			interpreter_datasets = glob.glob(os.path.join(interpreter_dataset_dir,"*"))
 			for dataset_dir in interpreter_datasets:
 				
-				ensemble_classes = all_inputs[pipeline_name].get_pipeline_ensemble()
+				model_classes = all_inputs[pipeline_name]['pipeline'].get_pipeline_model()
+				for model_name in model_classes:
+					
+					model_file_path = inspect.getfile(model_classes[model_name])
+					#model_last_modified = str(datetime.fromtimestamp(os.path.getmtime(model_file_path)))
+					model_last_source_hash = str(source_hash(model_classes[model_name]))
+					git_data = all_inputs[pipeline_name]['git_data']
+					model_last_modified = git_data.hexsha
+					task_id = model_name + ":"+ interpreter_name + ":" + dataset_dir
+					task_id_source_hash = task_id + ":model_last_source_hash" 
+					
+					if loc_hist[task_id] != model_last_modified and loc_hist[task_id_source_hash]!=model_last_source_hash:
+						task_list.setdefault(pipeline_name, {})
+						task_list[pipeline_name].setdefault(interpreter_name, {})
+						task_list[pipeline_name][interpreter_name].setdefault(dataset_dir, {})
+						task_list[pipeline_name][interpreter_name][dataset_dir].setdefault('model', {})
+						task_list[pipeline_name][interpreter_name][dataset_dir]['model'].setdefault(model_name, (task_id, model_last_modified, task_id_source_hash, model_last_source_hash))
+
+				ensemble_classes = all_inputs[pipeline_name]['pipeline'].get_pipeline_ensemble()
 				for ensemble_name in ensemble_classes:
 					
 					ensemble_file_path = inspect.getfile(ensemble_classes[ensemble_name])
 					#ensemble_last_modified = str(datetime.fromtimestamp(os.path.getmtime(ensemble_file_path)))
-					ensemble_last_modified = str(source_hash(ensemble_classes[ensemble_name]))
+					ensemble_last_source_hash = str(source_hash(ensemble_classes[ensemble_name]))
+					git_data = all_inputs[pipeline_name]['git_data']
+					ensemble_last_modified = git_data.hexsha
 					task_id = ensemble_name + ":"+ interpreter_name + ":" + dataset_dir
+					task_id_source_hash = task_id + ":ensemble_last_source_hash" 
 					
-					if loc_hist[task_id] != ensemble_last_modified:
+					#if loc_hist[task_id] != ensemble_last_modified and loc_hist[task_id_source_hash]!=ensemble_last_source_hash:
+					if True:
 						task_list.setdefault(pipeline_name, {})
 						task_list[pipeline_name].setdefault(interpreter_name, {})
 						task_list[pipeline_name][interpreter_name].setdefault(dataset_dir, {})
-						task_list[pipeline_name][interpreter_name][dataset_dir].setdefault(ensemble_name, (task_id, ensemble_last_modified))
+						task_list[pipeline_name][interpreter_name][dataset_dir].setdefault('ensemble', {})
+						task_list[pipeline_name][interpreter_name][dataset_dir]['ensemble'].setdefault(ensemble_name, (task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash))
 
 	if task_list == {}:
-		#print("Waiting for new tasks...")
+		print("Waiting for new tasks...")
 		return
 
 	print("-"*10)
@@ -164,40 +187,54 @@ def main():
 	print("-"*10)
 
 	pool_args = []
+	pool_args_ensemble = []
 
 	for pipeline_name in task_list:
 		all_dataset_dir = DATASET_DIR.format(pipeline_name=pipeline_name)
-		interpreters = all_inputs[pipeline_name].get_pipeline_dataset_interpreter()
+		interpreters = all_inputs[pipeline_name]['pipeline'].get_pipeline_dataset_interpreter()
 		for interpreter_name in task_list[pipeline_name].keys():
 			interpreter_dataset_dir = os.path.join(all_dataset_dir, interpreter_name)
 			interpreter_datasets = task_list[pipeline_name][interpreter_name].keys()
 			for dataset_dir in interpreter_datasets:
-				
+				models_ensembles = task_list[pipeline_name][interpreter_name][dataset_dir]
+				models_ensembles.setdefault('model', {})
+				models_ensembles.setdefault('ensemble', {})
+
 				#dat = interpreters[interpreter_name](dataset_dir).get_dataset()
-				ensemble_classes = all_inputs[pipeline_name].get_pipeline_ensemble()
-				for ensemble_name in task_list[pipeline_name][interpreter_name][dataset_dir].keys():
-					print("-"*10)
-					print("ensemble_name:\t",ensemble_name)
-					print("interpreter_name:\t",interpreter_name)
-					print("dataset_dir:\t",dataset_dir)
-					training_dir = ENSEMBLE_TRAINING.format(
+				model_classes = all_inputs[pipeline_name]['pipeline'].get_pipeline_model()
+				for model_name in models_ensembles['model'].keys():
+					task_id, model_last_modified, task_id_source_hash, model_last_source_hash = models_ensembles['model'][model_name]
+					training_dir = MODEL_TRAINING.format(
 						pipeline_name=pipeline_name,
 						interpreter_name=interpreter_name,
-						ensemble_name=ensemble_name
+						model_name=model_name,
+						commit_id=model_last_modified
 					)
 					os.makedirs(training_dir, exist_ok=True)
-					
-					task_id, ensemble_last_modified = task_list[pipeline_name][interpreter_name][dataset_dir][ensemble_name]
-					
-					pool_args.append((pipeline_name, ensemble_name, interpreter_name, dataset_dir, ensemble_classes, interpreters, task_id, ensemble_last_modified))
+					visualizers = all_inputs[pipeline_name]['pipeline'].get_pipeline_visualizer()
+					if loc_hist[task_id] != model_last_modified:
+						pool_args.append((pipeline_name, model_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, model_last_modified, task_id_source_hash, model_last_source_hash, visualizers))
+				
+				ensemble_classes = all_inputs[pipeline_name]['pipeline'].get_pipeline_ensemble()
+				print(models_ensembles['ensemble'])
+				for ensemble_name in models_ensembles['ensemble'].keys():
+					#task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash = models_ensembles['ensemble'][ensemble_name]
+					task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash = models_ensembles['ensemble'][ensemble_name]
+					task_id += ":" + ensemble_name
+					ensemble_training_dir = ENSEMBLE_TRAINING.format(
+						pipeline_name=pipeline_name,
+						interpreter_name=interpreter_name,
+						ensemble_name=ensemble_name,
+						commit_id=ensemble_last_modified
+					)
+					os.makedirs(ensemble_training_dir, exist_ok=True)
+					#if loc_hist[task_id] != ensemble_last_modified:
+					pool_args_ensemble.append((pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash, ensemble_classes))
 
-	#with torch.multiprocessing.Pool(torch.multiprocessing.cpu_count()) as p:
-	with torch.multiprocessing.Pool(1) as p:
-		res = p.starmap(train_ensemble, pool_args)
-		for status, task_id, ensemble_last_modified in res:
-			#status, task_id, ensemble_last_modified = train_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, ensemble_classes, interpreters, task_id, ensemble_last_modified)
-			if status:
-				loc_hist[task_id] = ensemble_last_modified
+	print(pool_args_ensemble)
+	for (pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash, ensemble_classes) in pool_args_ensemble:
+		visualizers = all_inputs[pipeline_name]['pipeline'].get_pipeline_visualizer()
+		status, task_id2, ensemble_last_modified, task_id_source_hash2, ensemble_last_source_hash = train_ensemble(pipeline_name, ensemble_name, interpreter_name, dataset_dir, model_classes, interpreters, task_id, ensemble_last_modified, task_id_source_hash, ensemble_last_source_hash, ensemble_classes, visualizers)
 
 if __name__ == "__main__":
 	import argparse

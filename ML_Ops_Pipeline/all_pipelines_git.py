@@ -20,7 +20,7 @@ global all_inputs, all_inputs_modules
 all_inputs = {}
 all_inputs_modules = {}
 
-def get_all_inputs():
+def get_all_inputs(debug=False):
 	global all_inputs, all_inputs_modules
 
 	os.makedirs(REMOTE_PIPELINES_DIR, exist_ok=True)
@@ -39,11 +39,13 @@ def get_all_inputs():
 		pipeline_dir = os.path.join(REMOTE_PIPELINES_DIR, pipeline_name)
 		if os.path.exists(pipeline_dir):
 			if log: print("pull", pipeline_dir)
-			# repo = git.Repo(pipeline_dir)
-			# repo.git.clean('-xdf')
-			# repo.git.reset('--hard')
-			os.rmdir(pipeline_dir)
-			repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
+			repo = git.Repo(pipeline_dir)
+			if not debug:
+				repo.git.clean('-xdf')
+				repo.git.reset('--hard')
+			
+			# os.rmdir(pipeline_dir)
+			# repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
 		else:
 			if log: print("clone", pipeline_dir)
 			repo = git.Repo.clone_from(pipeline_git, pipeline_dir)
@@ -54,7 +56,8 @@ def get_all_inputs():
 		assert not repo.bare
 		assert repo.__class__ is git.Repo
 
-		origin.pull()
+		if not debug:
+			origin.pull()
 
 
 		latest_commit = repo.head.commit #git_latest_commit(pipeline_dir)'

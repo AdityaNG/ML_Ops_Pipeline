@@ -31,6 +31,9 @@ HISTORY_PATH = os.path.join(PIPELINE_HOME, "history")
 REMOTE_PIPELINES_DIR = os.path.join(PIPELINE_HOME, "remote_pipelines")
 REMOTE_PIPELINES_TXT = os.path.join(PIPELINE_HOME, "remote_pipelines.txt")
 
+import mlflow
+mlflow.set_tracking_uri("file://" + MLFLOW_DIR)
+
 if not os.path.exists(REMOTE_PIPELINES_TXT):
 	import shutil
 	shutil.copyfile("remote_pipelines.txt", REMOTE_PIPELINES_TXT)
