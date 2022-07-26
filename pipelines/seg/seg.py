@@ -405,7 +405,7 @@ class seg_evaluator:
 
 	def evaluate(self, x, y):
 		preds = self.predict(x)
-		# TODO: write a common evaluation script that is common to all models
+		# TODO: write a predict evaluation script that is common to all models
 		# Note: Optionally, you can give model specific implementations for the evaluation logic
 		#		by overloading the evaluate(self, x, y) method in the model class
 		
@@ -417,8 +417,10 @@ class seg_evaluator:
 			'fp': 0, 	# 0<iou<thresh
 			'fn':0		# iou==0	
 		}
-
+		# if self.__class__.__name__ == 'seg_pipeline_ensembler_1':
+		# 	x = x['mask_rcnn']
 		dat_test = x.join(y)
+		print(dat_test)
 		print("Evaluate")
 		for index, row in tqdm(dat_test.iterrows(), total=dat_test.shape[0]):
 			img = cv2.imread(row['image_2'])
@@ -668,19 +670,64 @@ class pointrend(seg_evaluator, pipeline_model, seg_cfg):
 
 class seg_pipeline_ensembler_1(seg_evaluator, pipeline_ensembler):
 
+	model_output_classes = {
+		'vehicle':  (2, 3, 5, 7, )
+	}
+
 	def predict(self, x: dict) -> np.array:
 		model_names = list(x.keys())
 		predict_results = {
-			'result': [], 'another_result': []
+			'image_2': [],
+			'boxes': [],
+			'scores': [],
+			'classes': [],
+			'keypoints': [],
+			'masks': [],
+			'model_output_classes': []
 		}
-		for i in tqdm(x):
-			for mod_name in model_names:
-				preds = x[mod_name]
-			# TODO produce ensebled results based on all the model's predictions
-			predict_results["result"] += ["Some Ensembled Result"]
-			predict_results["another_result"] += ["Another Ensembled Result"]
+		# for i in tqdm(x):
+		masks = []
+		for mod_name in model_names:
+			preds = x[mod_name]
+			# print(mod_name)
+			# print(preds)
+			masks.append(preds['masks'].to_numpy())
+		# print(type(masks[0]))
+		# print('MASKS###',len(masks))
+		for index, row in preds.iterrows():
+			# for j in range(len(masks[0])):
+			pred_mask = np.full(masks[0][index][0].shape,False, dtype =bool)
+			for k in range(len(masks[0][index])):
+				# if masks[0][index][k].shape == (375, 1242):
+				pred_mask = np.logical_or(pred_mask,masks[0][index][k])
+			masks_rcnn = pred_mask
+			pred_mask = np.full(masks[1][index][0].shape,False, dtype =bool)
+			for k in range(len(masks[1][index])):
+				# if masks[1][index][k].shape == (375, 1242):
+				pred_mask = np.logical_or(pred_mask,masks[1][index][k])
+			ptrend_mask = pred_mask
+			pred_mask = np.full(masks[0][index][0].shape,False, dtype =bool)
+			pred_mask = np.logical_or(pred_mask,masks_rcnn)
+			pred_mask = np.logical_and(pred_mask,ptrend_mask)
+			# cv2.imshow('mask',pred_mask.astype(np.uint8)*255)
+			# cv2.waitKey(0)
+			# print(pred_mask.shape)
+			predict_results['image_2'] += [row['image_2'], ]
+			predict_results['boxes'] += [row['boxes'], ]
+			predict_results['scores'] += [0, ]
+			predict_results['classes'] += [0, ]
+			predict_results['keypoints'] += [0, ]
+			predict_results['masks'] += [pred_mask, ]
+			predict_results['model_output_classes'] += [self.model_output_classes, ]
 				
+			# # TODO produce ensebled results based on all the model's predictions
+			# 	predict_results["IOU"] += [res[1][0]]
+			# 	predict_results["Dice_Coeff"] += [res[1][1]]
+				
+
 		predict_results = pd.DataFrame(predict_results)
+		# print(predict_results)
+		# print(type(predict_results))
 		return predict_results
 
 
@@ -841,7 +888,7 @@ seg_input = pipeline_input("seg",
 		'mask_rcnn': mask_rcnn,
 		'pointrend': pointrend
 	}, {
-		#'seg_pipeline_ensembler_1': seg_pipeline_ensembler_1
+		'seg_pipeline_ensembler_1': seg_pipeline_ensembler_1
 	}, {
 		'iou_vis': iou_vis,
 		#'video_vis': video_vis
