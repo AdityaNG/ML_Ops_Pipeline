@@ -93,5 +93,24 @@ python -m pycodestyle *.py
 Run the unit tests
 ```bash
 python -m pytest --import-mode=append tests/
-```
 
+```
+# MODELS:
+	
+# Detecron2 folder:
+	Facebook's detectron2 model that has the following models:
+		Faster RCNN object detection model
+		Mask RCNN, Pointrend image segmentation models
+
+# Pointrend folder:
+	Pointrend model code, 
+	Create seperate Python3 environment to run.
+	
+# Vanilla Mask RCNN:
+	Mask RCNN can be cloned officially from https://github.com/matterport/Mask_RCNN 
+	Then clone My implementation code https://github.com/NikhilAdyapak/ImageSegmentation/tree/main/MRCNN
+	Create seperate Python 3.7 environment to run.
+
+# Yolov3 folder:
+	My implementation using yolov3
+	Download yolov3.weights from https://pjreddie.com/media/files/yolov3.weights 
